@@ -1,4 +1,5 @@
 -- Step 1.5: profiles, one per auth user (docs/plan.md §2.1, §2.2).
+-- DELIBERATE VIOLATION (step 1.4, #4): edited a committed migration. Do not merge.
 
 -- Shared trigger function: keeps updated_at current on every update.
 create function public.set_updated_at()
