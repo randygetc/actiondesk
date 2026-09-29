@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 
 import type { ActionResult } from "@/lib/action-result";
 import { log } from "@/lib/log";
+// DELIBERATE VIOLATION (step 1.4, #2): admin client in a Server Action. Do not merge.
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { updateProfileSchema } from "@/lib/validation/profile";
 
@@ -23,6 +25,7 @@ export async function updateProfile(
     };
   }
 
+  void createAdminClient;
   const supabase = await createClient();
   const {
     data: { user },
