@@ -57,3 +57,16 @@ Versions: Next 16.3, React 19.2, TypeScript 5.9, Tailwind 4, Zod 4, Vitest 5, @s
   Playwright loads `.env.local`.
 - **DB types:** `npm run db:types` regenerates and formats `src/lib/database.types.ts`.
   Clients are typed with `Database`.
+
+## CRUD pattern (step 1.6, 2026-09-29)
+- **Routes:** `(app)/<entity>/page.tsx` (list + create), `(app)/<entity>/[id]/page.tsx` (detail),
+  `(app)/<entity>/actions.ts` (Server Actions). Validate `[id]` with Zod and call `notFound()` on
+  failure. Another user's row is invisible under RLS, so it 404s like a missing one.
+- **Actions** use the `(prev, formData) => Promise<ActionResult>` signature for `useActionState`.
+  Updates and deletes add `.select("id")` and treat 0 rows as "not found". Postgres `23505` maps to
+  a field error; any other DB error is logged with its code and shown as a generic message.
+- **Client components** live in `src/components/<entity>/` and receive Server Actions as props.
+- **Destructive confirmations** use a native `<details>` disclosure, not `useState`, so the
+  confirm step works before hydration.
+- **Archive vs delete:** archive (`archived_at`) is the normal path and is reversible via Restore.
+  Lists show active rows by default, with `?show=archived` for the rest.
