@@ -93,15 +93,85 @@ export type Database = {
           },
         ];
       };
+      tasks: {
+        Row: {
+          completed_at: string | null;
+          created_at: string;
+          due_at: string | null;
+          id: string;
+          notes: string | null;
+          owner_id: string;
+          priority: Database["public"]["Enums"]["task_priority"];
+          project_id: string | null;
+          recurrence: string | null;
+          recurrence_tz: string | null;
+          series_id: string | null;
+          status: Database["public"]["Enums"]["task_status"];
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          completed_at?: string | null;
+          created_at?: string;
+          due_at?: string | null;
+          id?: string;
+          notes?: string | null;
+          owner_id?: string;
+          priority?: Database["public"]["Enums"]["task_priority"];
+          project_id?: string | null;
+          recurrence?: string | null;
+          recurrence_tz?: string | null;
+          series_id?: string | null;
+          status?: Database["public"]["Enums"]["task_status"];
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          completed_at?: string | null;
+          created_at?: string;
+          due_at?: string | null;
+          id?: string;
+          notes?: string | null;
+          owner_id?: string;
+          priority?: Database["public"]["Enums"]["task_priority"];
+          project_id?: string | null;
+          recurrence?: string | null;
+          recurrence_tz?: string | null;
+          series_id?: string | null;
+          status?: Database["public"]["Enums"]["task_status"];
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "tasks_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "tasks_project_id_owner_id_fkey";
+            columns: ["project_id", "owner_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id", "owner_id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      complete_task: {
+        Args: { p_next_due_at?: string; p_task_id: string };
+        Returns: string;
+      };
     };
     Enums: {
-      [_ in never]: never;
+      task_priority: "low" | "normal" | "high" | "urgent";
+      task_status: "todo" | "doing" | "done";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -231,6 +301,9 @@ export const Constants = {
     Enums: {},
   },
   public: {
-    Enums: {},
+    Enums: {
+      task_priority: ["low", "normal", "high", "urgent"],
+      task_status: ["todo", "doing", "done"],
+    },
   },
 } as const;

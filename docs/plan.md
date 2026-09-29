@@ -2,7 +2,7 @@
 
 Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.md.
 
-- **Last updated:** 2026-09-29 (step 1.6: projects PR open)
+- **Last updated:** 2026-09-29 (step 1.7: tasks PR open)
 - **Sources:** CLAUDE.md, docs/architecture.md, docs/adr/0001–0005, docs/KICKOFF.md, guardrails/, .claude/
 - **Scope:** Phase 1 is in full detail. Phases 2 and 3 are outlined and get detailed in steps 2.1 and 3.1.
 - **Needs your decision:** the owner items in §7 (risks and gaps in the guardrails). All §6 decisions are made.
@@ -16,8 +16,8 @@ Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.
 | 1.3 | Scaffold | done (PR #4) |
 | 1.4 | Prove guardrails | done: all four caught in CI (draft PR #6, results in its comments); owner closes it |
 | 1.5 | Google sign-in + profiles | done (PR #5); real Google sign-in awaits owner credentials |
-| 1.6 | Projects CRUD (vague prompt) | PR open on `phase1/projects` |
-| 1.7 | Tasks CRUD (full spec) | not started |
+| 1.6 | Projects CRUD (vague prompt) | done (PR #7) |
+| 1.7 | Tasks CRUD (full spec) | PR open on `phase1/tasks`; library: temporal-polyfill (R-8), date-only = 23:59 local |
 | 1.8 | Timezone edge cases | not started |
 | 1.9 | CI | not started |
 | 2.x | LLM features | outline only |
