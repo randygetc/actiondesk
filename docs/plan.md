@@ -2,10 +2,10 @@
 
 Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.md.
 
-- **Last updated:** 2026-09-28 (step 1.1, before any code)
+- **Last updated:** 2026-09-29 (step 1.1: owner decisions recorded in §6)
 - **Sources:** CLAUDE.md, docs/architecture.md, docs/adr/0001–0005, docs/KICKOFF.md, guardrails/, .claude/
 - **Scope:** Phase 1 is in full detail. Phases 2 and 3 are outlined and get detailed in steps 2.1 and 3.1.
-- **Needs your decision:** §6 (open decisions) and §7 (risks and gaps in the guardrails). Please read these before approving.
+- **Needs your decision:** the owner items in §7 (risks and gaps in the guardrails). All §6 decisions are made.
 
 ## 0. Status
 
@@ -14,7 +14,7 @@ Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.
 | 1.1 | Plan | this document, awaiting review |
 | 1.2 | Lock architecture (owner) | not started |
 | 1.3 | Scaffold | not started |
-| 1.4 | Prove guardrails | not started |
+| 1.4 | Prove guardrails | not started (runs after 1.5 is merged, D-9) |
 | 1.5 | Google sign-in + profiles | not started |
 | 1.6 | Projects CRUD (vague prompt) | not started |
 | 1.7 | Tasks CRUD (full spec) | not started |
@@ -187,7 +187,7 @@ Ask before installing anything. Expected dependencies:
 - runtime: `next`, `react`, `@supabase/ssr`, `@supabase/supabase-js`, `zod`, `server-only`, `tailwindcss`, shadcn's peer dependencies
 - dev: `typescript`, `eslint`, `vitest`, `@playwright/test`, `dependency-cruiser`, `prettier`
 
-The Tailwind and shadcn dependencies should be confirmed at the ask. `server-only` is listed as a dev dependency in KICKOFF; it's normally a runtime dependency (D-10).
+The Tailwind and shadcn dependencies should be confirmed at the ask. `server-only` is listed as a dev dependency in KICKOFF; it goes in `dependencies` (runtime) instead (D-10, accepted).
 
 Acceptance:
 - [ ] `npm run dev` serves `/login`.
@@ -211,7 +211,7 @@ Acceptance:
 - [ ] Each violation is in its own commit, and the report names the check and job that failed.
 - [ ] Nothing is "fixed" or bypassed.
 
-Violation 1 needs `@anthropic-ai/sdk` installed, or depcruise may report it as unresolvable instead (to be verified). Violation 4 needs a migration on `main` first; 1.5's migration is the first candidate, so 1.4 may need to run after 1.5 is merged (D-9).
+Violation 1 needs `@anthropic-ai/sdk` installed, or depcruise may report it as unresolvable instead (to be verified). Violation 4 needs a migration on `main` first; 1.5's migration is the first candidate, so 1.4 runs after the 1.5 PR is merged (D-9, accepted).
 
 **1.5 Google sign-in + profiles**
 
@@ -232,13 +232,7 @@ Acceptance:
 
 **1.6 Projects CRUD** (friction exercise A: the prompt is "Add projects CRUD.")
 
-This plan defines the `projects` schema because `tasks` depends on it. Rule 11 says to read this plan at the start of each session, so the "vague prompt" won't really be vague any more (D-2).
-
-Acceptance (the minimum a correct result must meet, whatever the prompt):
-- [ ] Migration via `/migrate`, with RLS and pgTAP as in §2.2.
-- [ ] Create, rename, archive and delete through Zod-validated Server Actions. Duplicate names are rejected with a friendly error.
-- [ ] Deleting a project with tasks follows D-3.
-- [ ] Vitest covers the validation schemas; Playwright covers create → rename → delete.
+The `projects` schema and RLS are defined above because `tasks` depends on them. Acceptance criteria for 1.6 are deliberately left out so the prompt stays vague (D-2, decided 2026-09-29). Judge the result in the 1.6 vs 1.7 debrief.
 
 **1.7 Tasks CRUD** (Plan Mode first; acceptance criteria and tests before implementation)
 
@@ -439,28 +433,30 @@ The plan also relies on some **interpretations**. They don't change rules, but p
 
 ---
 
-## 6. Open decisions (owner)
+## 6. Decisions (owner)
 
-| # | Decision | Recommendation |
-|---|---|---|
-| D-1 | Phase 1 rows keyed by `owner_id` and migrated to `workspace_id` in Phase 3, or `workspace_id` from day one | `owner_id` now, because KICKOFF 3.1 depends on doing that migration |
-| D-2 | This plan specifies `projects` in detail, which removes the point of exercise A (1.6's vague prompt), since Claude reads this file every session | Keep only the schema and RLS (needed by tasks); cut the 1.6 acceptance list before approving if you want the exercise to stay honest |
-| D-3 | What happens to tasks when a project is deleted | Archive is the normal path. Hard delete sets tasks' `project_id` to null. The UI warns with a task count. |
-| D-4 | Priority levels | `low` / `normal` / `high` / `urgent` enum |
-| D-5 | Recurrence anchor: the profile timezone at completion time, or the task's own `recurrence_tz` fixed at creation | Store `recurrence_tz`, so moving to Manila doesn't turn your 9am Pacific standup into 9am Manila. Display still follows the profile. |
-| D-6 | Week start and the "This week" definition; allow raw RRULE entry | Monday start (ISO); presets only |
-| D-7 | Next occurrence based on the previous `due_at` (schedule-based) or on the completion date | Schedule-based: the next occurrence after the previous `due_at` that is also after now, so overdue recurring tasks don't pile up |
-| D-8 | How e2e tests sign in without Google | Enable email/password **locally and in CI only**. Playwright signs in seeded users with supabase-js and sets the cookies. Prod keeps Google only. |
-| D-9 | 1.4 needs a migration on `main` for violation 4 | Run 1.4 after the 1.5 PR is merged, or merge a trivial first migration in 1.3 |
-| D-10 | `server-only` as a runtime or dev dependency | Runtime (`dependencies`), since it runs in the production bundle |
-| D-11 | Who counts as "admin" for the usage page | `app_admins` table plus `is_app_admin()`, with the row inserted by you via SQL |
-| D-12 | How `llm_usage` rows are written | `log_llm_usage()` definer function; no direct insert policy |
-| D-13 | Extraction's `owner` field in single-user Phase 2 | Store it as `assignee_text`; extract only tasks for the user by default, with an option to include others |
-| D-14 | Persist extraction drafts or the raw pasted text | No: ephemeral review, only accepted tasks are saved, plus `source_quote` |
-| D-15 | Ask assistant: markdown rendering, and whether chat history is persisted | Plain text with line breaks; no persistence in Phase 2 |
-| D-16 | Invite acceptance mechanism | `accept_invite(token)` definer function; the token is hashed at rest; the email must match |
-| D-17 | Soft or hard delete of workspaces | Soft delete (`deleted_at`) with a purge job later. Hard delete behind aal2 is acceptable if you prefer it. |
-| D-18 | Invites: send an email, or share a link | Share a link in 3.3; email once the provider is chosen in 3.6 |
+On 2026-09-29 the owner accepted every recommendation, and chose to cut the 1.6 acceptance list for D-2.
+
+| # | Decision | Recommendation | Decision (2026-09-29) |
+|---|---|---|---|
+| D-1 | Phase 1 rows keyed by `owner_id` and migrated to `workspace_id` in Phase 3, or `workspace_id` from day one | `owner_id` now, because KICKOFF 3.1 depends on doing that migration | Accepted |
+| D-2 | This plan specifies `projects` in detail, which removes the point of exercise A (1.6's vague prompt), since Claude reads this file every session | Keep only the schema and RLS (needed by tasks); cut the 1.6 acceptance list before approving if you want the exercise to stay honest | Cut the 1.6 acceptance list; keep only the schema and RLS |
+| D-3 | What happens to tasks when a project is deleted | Archive is the normal path. Hard delete sets tasks' `project_id` to null. The UI warns with a task count. | Accepted |
+| D-4 | Priority levels | `low` / `normal` / `high` / `urgent` enum | Accepted |
+| D-5 | Recurrence anchor: the profile timezone at completion time, or the task's own `recurrence_tz` fixed at creation | Store `recurrence_tz`, so moving to Manila doesn't turn your 9am Pacific standup into 9am Manila. Display still follows the profile. | Accepted |
+| D-6 | Week start and the "This week" definition; allow raw RRULE entry | Monday start (ISO); presets only | Accepted |
+| D-7 | Next occurrence based on the previous `due_at` (schedule-based) or on the completion date | Schedule-based: the next occurrence after the previous `due_at` that is also after now, so overdue recurring tasks don't pile up | Accepted |
+| D-8 | How e2e tests sign in without Google | Enable email/password **locally and in CI only**. Playwright signs in seeded users with supabase-js and sets the cookies. Prod keeps Google only. | Accepted |
+| D-9 | 1.4 needs a migration on `main` for violation 4 | Run 1.4 after the 1.5 PR is merged, or merge a trivial first migration in 1.3 | Accepted: run 1.4 after the 1.5 PR is merged |
+| D-10 | `server-only` as a runtime or dev dependency | Runtime (`dependencies`), since it runs in the production bundle | Accepted |
+| D-11 | Who counts as "admin" for the usage page | `app_admins` table plus `is_app_admin()`, with the row inserted by you via SQL | Accepted |
+| D-12 | How `llm_usage` rows are written | `log_llm_usage()` definer function; no direct insert policy | Accepted |
+| D-13 | Extraction's `owner` field in single-user Phase 2 | Store it as `assignee_text`; extract only tasks for the user by default, with an option to include others | Accepted |
+| D-14 | Persist extraction drafts or the raw pasted text | No: ephemeral review, only accepted tasks are saved, plus `source_quote` | Accepted |
+| D-15 | Ask assistant: markdown rendering, and whether chat history is persisted | Plain text with line breaks; no persistence in Phase 2 | Accepted |
+| D-16 | Invite acceptance mechanism | `accept_invite(token)` definer function; the token is hashed at rest; the email must match | Accepted |
+| D-17 | Soft or hard delete of workspaces | Soft delete (`deleted_at`) with a purge job later. Hard delete behind aal2 is acceptable if you prefer it. | Accepted |
+| D-18 | Invites: send an email, or share a link | Share a link in 3.3; email once the provider is chosen in 3.6 | Accepted |
 
 ---
 
