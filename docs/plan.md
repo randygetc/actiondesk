@@ -2,7 +2,7 @@
 
 Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.md.
 
-- **Last updated:** 2026-09-29 (step 1.1: owner decisions recorded in §6)
+- **Last updated:** 2026-09-29 (step 1.3: scaffold PR open)
 - **Sources:** CLAUDE.md, docs/architecture.md, docs/adr/0001–0005, docs/KICKOFF.md, guardrails/, .claude/
 - **Scope:** Phase 1 is in full detail. Phases 2 and 3 are outlined and get detailed in steps 2.1 and 3.1.
 - **Needs your decision:** the owner items in §7 (risks and gaps in the guardrails). All §6 decisions are made.
@@ -11,9 +11,9 @@ Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.
 
 | Step | What | State |
 |---|---|---|
-| 1.1 | Plan | this document, awaiting review |
-| 1.2 | Lock architecture (owner) | not started |
-| 1.3 | Scaffold | not started |
+| 1.1 | Plan | done; owner decisions in §6 |
+| 1.2 | Lock architecture (owner) | done: CODEOWNERS, `main` ruleset (PR + `guardrails` check, 0 approvals), label, lock test (ADR-0006 rejected) |
+| 1.3 | Scaffold | PR open on `phase1/scaffold`, awaiting owner merge |
 | 1.4 | Prove guardrails | not started (runs after 1.5 is merged, D-9) |
 | 1.5 | Google sign-in + profiles | not started |
 | 1.6 | Projects CRUD (vague prompt) | not started |
