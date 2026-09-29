@@ -2,7 +2,7 @@
 
 Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.md.
 
-- **Last updated:** 2026-09-29 (step 1.3: scaffold PR open)
+- **Last updated:** 2026-09-29 (step 1.5: auth PR open)
 - **Sources:** CLAUDE.md, docs/architecture.md, docs/adr/0001–0005, docs/KICKOFF.md, guardrails/, .claude/
 - **Scope:** Phase 1 is in full detail. Phases 2 and 3 are outlined and get detailed in steps 2.1 and 3.1.
 - **Needs your decision:** the owner items in §7 (risks and gaps in the guardrails). All §6 decisions are made.
@@ -13,9 +13,9 @@ Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.
 |---|---|---|
 | 1.1 | Plan | done; owner decisions in §6 |
 | 1.2 | Lock architecture (owner) | done: CODEOWNERS, `main` ruleset (PR + `guardrails` check, 0 approvals), label, lock test (ADR-0006 rejected) |
-| 1.3 | Scaffold | PR open on `phase1/scaffold`, awaiting owner merge |
+| 1.3 | Scaffold | done (PR #4) |
 | 1.4 | Prove guardrails | not started (runs after 1.5 is merged, D-9) |
-| 1.5 | Google sign-in + profiles | not started |
+| 1.5 | Google sign-in + profiles | PR open on `phase1/google-auth`; Google credentials needed from owner to test the real sign-in |
 | 1.6 | Projects CRUD (vague prompt) | not started |
 | 1.7 | Tasks CRUD (full spec) | not started |
 | 1.8 | Timezone edge cases | not started |
@@ -44,7 +44,7 @@ These apply to every phase. Once they're confirmed in code, move them into docs/
   - Use one policy per operation (`select`, `insert`, `update`, `delete`). Avoid `for all` so tests map 1:1 to policies.
   - Use `to authenticated`.
   - Write `(select auth.uid())` rather than `auth.uid()` so Postgres evaluates it once per query instead of once per row.
-- **pgTAP layout.** Tests go in `supabase/tests/NNN_<table>.test.sql`. Each policy gets at least three cases: owner allowed, other user denied, anon denied. They use shared helpers for creating users and switching `request.jwt.claims`, in `supabase/tests/helpers/` (to be decided at 1.5).
+- **pgTAP layout.** Tests go in `supabase/tests/NNN_<table>.test.sql`. Each policy gets at least three cases: owner allowed, other user denied, anon denied. They use shared helpers for creating users and switching `request.jwt.claims`, in `supabase/tests/helpers/auth.psql` (decided at 1.5; see docs/conventions.md).
 - **Indexes.** Phase 1 adds only primary keys and unique constraints that exist for correctness. Rule 13 means no performance indexes until step 3.7 measures them (see risk R-9).
 - **Logging.** Everything goes through one structured logger, `src/lib/log.ts`. The minimal version is added at 1.3; Sentry and request IDs come at 3.8. It never logs titles, notes, extracted text, file contents, tokens or keys; ids and counts only.
 
