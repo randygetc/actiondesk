@@ -1,0 +1,49 @@
+# ActionDesk architecture guardrails. LOCKED — see docs/architecture.md §6.
+# Make the "guardrails" job a required status check on main.
+name: guardrails
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+jobs:
+  guardrails:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Locked paths and append-only migrations
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: bash guardrails/check.sh
+
+      - name: Set up Node
+        if: hashFiles('package-lock.json') != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Import boundaries (dependency-cruiser)
+        if: hashFiles('package-lock.json') != ''
+        run: |
+          npm ci
+          npx depcruise --config guardrails/dependency-cruiser.cjs src
+
+      - name: Set up Supabase CLI
+        if: hashFiles('supabase/config.toml') != ''
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: RLS and policy tests (pgTAP)
+        if: hashFiles('supabase/config.toml') != ''
+        run: |
+          supabase db start
+          supabase test db

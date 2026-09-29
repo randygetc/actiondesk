@@ -1,0 +1,11 @@
+# Replace YOUR_GITHUB_USERNAME. Enforced only once you have a second reviewer
+# (GitHub doesn't let you approve your own PR). Until then, the guardrails
+# check + 'architecture-approved' label is the gate. See docs/KICKOFF.md step 1.2.
+/CLAUDE.md                                   @YOUR_GITHUB_USERNAME
+/docs/architecture.md                        @YOUR_GITHUB_USERNAME
+/docs/adr/                                   @YOUR_GITHUB_USERNAME
+/.claude/                                    @YOUR_GITHUB_USERNAME
+/guardrails/                                 @YOUR_GITHUB_USERNAME
+/.github/                                    @YOUR_GITHUB_USERNAME
+/supabase/migrations/                        @YOUR_GITHUB_USERNAME
+/supabase/tests/000_rls_enabled.test.sql     @YOUR_GITHUB_USERNAME

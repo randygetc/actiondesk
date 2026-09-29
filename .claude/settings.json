@@ -1,0 +1,65 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "Bash(npm ci)",
+      "Bash(npm test:*)",
+      "Bash(npx:*)",
+      "Bash(supabase:*)",
+      "Bash(git:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr checks:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(gh run:*)"
+    ],
+    "ask": [
+      "Bash(npm install:*)",
+      "Bash(npm i:*)",
+      "Bash(supabase db push:*)",
+      "Bash(supabase link:*)",
+      "Bash(supabase functions deploy:*)",
+      "Bash(supabase secrets:*)",
+      "Bash(vercel:*)",
+      "Bash(gh api:*)",
+      "Bash(rm -rf:*)"
+    ],
+    "deny": [
+      "Edit(./CLAUDE.md)",
+      "Edit(./docs/architecture.md)",
+      "Edit(./docs/adr/**)",
+      "Edit(./.claude/**)",
+      "Edit(./guardrails/**)",
+      "Edit(./.github/workflows/guardrails.yml)",
+      "Edit(./.github/CODEOWNERS)",
+      "Edit(./supabase/tests/000_rls_enabled.test.sql)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh pr edit:*)",
+      "Bash(gh label:*)",
+      "Bash(git push origin main:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard.sh" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // empty' | xargs -r npx --no-install prettier --write --ignore-unknown 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}
