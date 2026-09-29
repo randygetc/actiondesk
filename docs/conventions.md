@@ -34,3 +34,26 @@ Versions: Next 16.3, React 19.2, TypeScript 5.9, Tailwind 4, Zod 4, Vitest 5, @s
   `.prettierignore` so doc diffs stay minimal.
 - **Logging.** `log.info(event, fields)` from `src/lib/log.ts`; fields are ids and counts.
   Sensitive-looking field names are redacted as a backstop only.
+
+## Auth and tests (step 1.5, 2026-09-29)
+- **pgTAP helpers** live in `supabase/tests/helpers/auth.psql` and are pulled into a test with
+  `\ir helpers/auth.psql` right after `begin;`. The `.psql` extension keeps `supabase test db` from
+  running the file on its own, and everything it creates (schema `tests`) rolls back with the test.
+  Helpers: `tests.create_user(email, meta)`, `tests.authenticate_as(uid)`,
+  `tests.authenticate_as_anon()`, `tests.clear_authentication()`.
+  Capture ids with `select tests.create_user(...) as a \gset`, then use `:'a'`. Don't call
+  `create_user` inside a `where` clause: it runs once per scanned row.
+- **Table privileges, not just policies.** Each table revokes all from `anon, authenticated`, then
+  grants only what the policies need, with column-level `update` grants for editable columns.
+  So anon gets `42501` (permission denied), not an empty result.
+- **Every route that needs a user** calls `requireUser()` (`src/lib/auth/user.ts`) in Server
+  Components. Server Actions call `getUser()` themselves and return `ActionResult`
+  (`src/lib/action-result.ts`). The proxy's redirect to `/login?next=…` is a convenience only.
+- **Redirect targets from input** go through `safeNextPath()` (`src/lib/auth/redirect.ts`).
+  Route handlers redirect with a relative `Location`; Next normalizes `request.url`'s host
+  (127.0.0.1 → localhost in dev), which would drop the session cookie.
+- **e2e sign-in (D-8):** `signInAsNewUser(context, baseURL)` in `e2e/helpers/auth.ts` signs up a
+  fresh email/password user and copies the @supabase/ssr cookies into the browser context.
+  Playwright loads `.env.local`.
+- **DB types:** `npm run db:types` regenerates and formats `src/lib/database.types.ts`.
+  Clients are typed with `Database`.

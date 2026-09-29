@@ -1,4 +1,9 @@
+import { existsSync } from "node:fs";
+
 import { defineConfig, devices } from "@playwright/test";
+
+// Same env as the app (.env.local), so e2e helpers can reach local Supabase.
+if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 
 const baseURL = "http://127.0.0.1:3000";
 
