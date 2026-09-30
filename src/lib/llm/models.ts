@@ -14,8 +14,10 @@ export type ModelConfig = {
 };
 
 export const EXTRACT_MODEL: ModelConfig = {
-  model: "claude-opus-5-5",
-  // Opus 5.5 defaults to medium; set it explicitly (thinking can't be disabled).
+  // Owner decision at 2.4: same eval score as claude-opus-5-5 (98%) at 47% of
+  // the cost and ~2x the speed (docs/learnings.md).
+  model: "claude-sonnet-5-5",
+  // Sonnet 5.5 defaults to high; medium matched Opus on the eval.
   effort: "medium",
   fallbacks: true,
   maxTokens: 16_000,

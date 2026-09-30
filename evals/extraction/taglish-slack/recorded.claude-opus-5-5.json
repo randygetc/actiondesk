@@ -1,0 +1,84 @@
+[
+  {
+    "model": "claude-opus-5-5",
+    "id": "msg_011CfZ3vRAGDSfdi9jH9hxMQ",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "",
+        "signature": "CAQSrAkKEAgSGAI4AUIIdGhpbmtpbmcSDLTBr78/0kNgopE/iBoMmZQ4PN4uI5s+GAjeIjAhlx/MG71U30IciDIYm5teC6YoQXKUY+yDQt0l3ovxn4hdlV3p9swdCuawuFRoNxYqyQi2k+uDGTMgds0L3Mny8qnuHdG6Kt5vd3dNQIbJtHFBK9UubWlUaN8Bnr9DMLZTDHrtI6GIDOmPKvRcd5B4+j3VBcZXtyx0qbKEDZhV9n3wooL9oZ3g5cv3FC5pgRC7b+hxarKo5FOBPhaZGye/9NqhOlpr6oFoUQm/637HZs8x025UkvWyd/x86C0MYW6ZcZBKiwH9lxzdkM8vnkeke/fe+kYA73V8HZEsMNNr7dK8NNzFXQ/LB+keQpjGwCbJc7HK45CDHj8NFF6K9aEVmYgt0jVyfXNqy2qt3nGQlMkXPVb702Km4fzAT0e0+CqzCjU6dxrugS7RU7eujHHB+QwNTdwLf8k/JdyRg1Sep46hIPVr62+gkViLso3GjhyxaRXVKQ3BB5ggrLBQTX+/izHgrWUqhs7d/zK8/it6oP6bqSKTrGx+Jb6ZbaSSypQTB0jzPkwKygD5Pr70Ede3e8DiXQ/yJSk3KfC5UkOWeM7hbycnI+ucJ93NciEeGFUAsK4FoiPYaigFE99xmfvqX1bG6gD3G3uqEwAKN0iR7jHrYGCLytb9Ro5alN7i5UKhGzRdhnstFUXgQ7w4igMCssByNeeDYFm/mZildAD/eW2YowYiw4Y2ewnRFkgerqEOJX8tx9AvLHzRbtj+lBN4+DdgEV4q+ImlAo8gEKAc2vbnDoAMSRKHzlgfYaUeY8DU9oiDg+DTP5wXrP1uR9GkwaxJaXdnnDXdE4797iO64eFmzn5e0vtpoj4ahRJhpe1/9zFnU3n+2k7zlGcOrog3jSk8Gt4y4KBehHlI2VUy+QM0ur6XtuW4PD1/7TvdbLQFe6YY6Fu5+JKa6pyN4ainO+msSELfettH+IEUwyIm8scDEo0bbWYrQZQR1CIgy8EZHO1FuoUIp9/tZfAWyN8faw22o8GbQquerebKkqjUyx8fCjoBumDxayLcsPhaTXXtDHoGLp5TD5pWsZz41frK2Z8jReLyDUDnZX7lAz05ZOgbtEj16iYtSYP9ds2cjIowOiguMLMJceS6qT2I+Rb97prtp3GyGtO152zITF5x1a4Q++JYZKGtOoPhxd7/nU8q8NZavsacOu1t72z1fb82M8lLWB8Jg8xHXkuMc6clvSnxjn/XtaMNeqH2qEtM3bLEcJJi2brysbaSq5Qt5tysfYQaMaRn6PthsYlfGgAzoRHZRp6VX5wEJHZELkv5JWz3wHkGkKdpV7m2Bjw8cbHmVH9ZI1UiPG/1v1ZMFDrFpwLd2wz6mfuSYBDyUTisGhcsDQprKBbs+c3oWp1Pe6OtAKkscjAMuO26VkZ2245jSF9Oovc29llFWziUmJqCVDXn9OMxAblQXdby++KQG0hkSluB4T5JaFWt/DkOjeSESF1JcYaA6G+UEfnzlqAHTO7ZIt6I51YnlvCjumafXsuSc29ZM/LtS0VLV+umilNaM1zopknphUFTs8gYmhgB"
+      },
+      {
+        "type": "tool_use",
+        "id": "toolu_018K6W556ektTRzeXkCWrPqh",
+        "name": "add_task",
+        "caller": {
+          "type": "direct"
+        },
+        "input": {
+          "title": "Review Ana's PR for the checkout page",
+          "assignee": "me",
+          "due_date": "2026-10-06",
+          "due_time": "17:00",
+          "project_id": "00000000-0000-4000-8000-000000000001",
+          "confidence": 0.9,
+          "source_quote": "@Randy pa-review naman ng PR ko sa checkout page, need ko ma-merge before 5pm today"
+        }
+      },
+      {
+        "type": "tool_use",
+        "id": "toolu_01X85z2m3hCjcGq2zBb1usTE",
+        "name": "add_task",
+        "caller": {
+          "type": "direct"
+        },
+        "input": {
+          "title": "Update the Hiring tracker",
+          "assignee": "me",
+          "due_date": null,
+          "due_time": null,
+          "project_id": "00000000-0000-4000-8000-000000000002",
+          "confidence": 0.75,
+          "source_quote": "paki-update yung Hiring tracker pag may time ka"
+        }
+      }
+    ],
+    "container": null,
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "stop_details": null,
+    "usage": {
+      "input_tokens": 2002,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 729,
+      "service_tier": "standard",
+      "inference_geo": "global",
+      "iterations": [
+        {
+          "input_tokens": 2002,
+          "output_tokens": 729,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "type": "message",
+          "model": null
+        }
+      ],
+      "output_tokens_details": {
+        "thinking_tokens": 240
+      }
+    },
+    "diagnostics": null,
+    "parsed_output": null
+  }
+]

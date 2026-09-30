@@ -1,13 +1,13 @@
 [
   {
-    "model": "claude-sonnet-5-5",
-    "id": "msg_011CfZ6NdtgxWRfYKY5i9i2h",
+    "model": "claude-haiku-4-5-20251001",
+    "id": "msg_011CfZ6G5oUnEY8CB8RX85Gn",
     "type": "message",
     "role": "assistant",
     "content": [
       {
         "type": "tool_use",
-        "id": "toolu_01LEi9UzvyDJ53m6G3gBQ4Ky",
+        "id": "toolu_01UJBNVLuKfqA8UwEWB3FZME",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -18,13 +18,13 @@
           "due_date": "2026-10-08",
           "due_time": null,
           "project_id": null,
-          "confidence": 0.9,
+          "confidence": 0.95,
           "source_quote": "Ana: update the roadmap slides by Thursday"
         }
       },
       {
         "type": "tool_use",
-        "id": "toolu_018bZLSdHKfJQhiFsofBCZwY",
+        "id": "toolu_01VaJHf1EddHiDXUsWJggsEL",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -35,13 +35,13 @@
           "due_date": "2026-10-08",
           "due_time": null,
           "project_id": null,
-          "confidence": 0.9,
+          "confidence": 0.95,
           "source_quote": "Randy: write the release notes by Thursday"
         }
       },
       {
         "type": "tool_use",
-        "id": "toolu_01E6gZKtEQBCVnbThUeCoyPx",
+        "id": "toolu_01EvDL7VVPgf73udceQucsWX",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -52,13 +52,13 @@
           "due_date": "2026-10-07",
           "due_time": null,
           "project_id": null,
-          "confidence": 0.9,
+          "confidence": 0.95,
           "source_quote": "Carlo: QA the mobile build tomorrow"
         }
       },
       {
         "type": "tool_use",
-        "id": "toolu_013sL4WJaPygZU1U7zsTzXWG",
+        "id": "toolu_01TmCsuXsHfPuFdNUe7TxaDd",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -69,7 +69,7 @@
           "due_date": null,
           "due_time": null,
           "project_id": null,
-          "confidence": 0.85,
+          "confidence": 0.9,
           "source_quote": "Randy and Joy: pick a date for the beta webinar"
         }
       }
@@ -79,33 +79,16 @@
     "stop_sequence": null,
     "stop_details": null,
     "usage": {
-      "input_tokens": 1975,
+      "input_tokens": 1857,
       "cache_creation_input_tokens": 0,
       "cache_read_input_tokens": 0,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
         "ephemeral_1h_input_tokens": 0
       },
-      "output_tokens": 856,
+      "output_tokens": 680,
       "service_tier": "standard",
-      "inference_geo": "global",
-      "iterations": [
-        {
-          "input_tokens": 1975,
-          "output_tokens": 856,
-          "cache_read_input_tokens": 0,
-          "cache_creation_input_tokens": 0,
-          "cache_creation": {
-            "ephemeral_5m_input_tokens": 0,
-            "ephemeral_1h_input_tokens": 0
-          },
-          "type": "message",
-          "model": null
-        }
-      ],
-      "output_tokens_details": {
-        "thinking_tokens": 0
-      }
+      "inference_geo": "not_available"
     },
     "diagnostics": null,
     "parsed_output": null

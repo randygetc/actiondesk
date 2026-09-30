@@ -1,0 +1,45 @@
+[
+  {
+    "model": "claude-haiku-4-5-20251001",
+    "id": "msg_011CfZ6D3unqu8ikAFrQq8sx",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01Y3UBf51hBTdwXk4WRGxRA9",
+        "name": "add_task",
+        "caller": {
+          "type": "direct"
+        },
+        "input": {
+          "title": "Prep talking points for Thursday's board call",
+          "assignee": "me",
+          "due_date": "2026-10-08",
+          "due_time": null,
+          "project_id": null,
+          "confidence": 0.95,
+          "source_quote": "I'll just prep the talking points for Thursday's board call."
+        }
+      }
+    ],
+    "container": null,
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "stop_details": null,
+    "usage": {
+      "input_tokens": 1847,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 191,
+      "service_tier": "standard",
+      "inference_geo": "not_available"
+    },
+    "diagnostics": null,
+    "parsed_output": null
+  }
+]

@@ -1,13 +1,13 @@
 [
   {
-    "model": "claude-sonnet-5-5",
-    "id": "msg_011CfZ6M5GcFDRxxCRg6w2Rv",
+    "model": "claude-haiku-4-5-20251001",
+    "id": "msg_011CfZ6EB1waznVLcLYYMQh6",
     "type": "message",
     "role": "assistant",
     "content": [
       {
         "type": "tool_use",
-        "id": "toolu_01SEZYPUArNGudRKMSGcWMm4",
+        "id": "toolu_01TSWCrxTqgMGWnq2k8pQw7W",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -18,25 +18,25 @@
           "due_date": "2026-10-20",
           "due_time": null,
           "project_id": "00000000-0000-4000-8000-000000000003",
-          "confidence": 0.9,
-          "source_quote": "Randy, please prepare the metrics deck for the retro."
+          "confidence": 0.95,
+          "source_quote": "please prepare the metrics deck for the retro"
         }
       },
       {
         "type": "tool_use",
-        "id": "toolu_01ATGa17PUDqoFHeaDjeKui7",
+        "id": "toolu_01QMD1qcTS4xN8MU28ECNV1B",
         "name": "add_task",
         "caller": {
           "type": "direct"
         },
         "input": {
-          "title": "Renew SSL cert for the website",
+          "title": "Renew SSL cert for website",
           "assignee": "me",
           "due_date": "2026-10-09",
           "due_time": null,
           "project_id": "00000000-0000-4000-8000-000000000001",
           "confidence": 0.95,
-          "source_quote": "renew the SSL cert for the website within 3 days."
+          "source_quote": "renew the SSL cert for the website within 3 days"
         }
       }
     ],
@@ -45,33 +45,16 @@
     "stop_sequence": null,
     "stop_details": null,
     "usage": {
-      "input_tokens": 1972,
+      "input_tokens": 1853,
       "cache_creation_input_tokens": 0,
       "cache_read_input_tokens": 0,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
         "ephemeral_1h_input_tokens": 0
       },
-      "output_tokens": 477,
+      "output_tokens": 394,
       "service_tier": "standard",
-      "inference_geo": "global",
-      "iterations": [
-        {
-          "input_tokens": 1972,
-          "output_tokens": 477,
-          "cache_read_input_tokens": 0,
-          "cache_creation_input_tokens": 0,
-          "cache_creation": {
-            "ephemeral_5m_input_tokens": 0,
-            "ephemeral_1h_input_tokens": 0
-          },
-          "type": "message",
-          "model": null
-        }
-      ],
-      "output_tokens_details": {
-        "thinking_tokens": 0
-      }
+      "inference_geo": "not_available"
     },
     "diagnostics": null,
     "parsed_output": null

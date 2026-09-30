@@ -1,13 +1,18 @@
 [
   {
-    "model": "claude-sonnet-5-5",
-    "id": "msg_011CfZ6PM6g1gdiWHiaj7ta9",
+    "model": "claude-opus-5-5",
+    "id": "msg_011CfZ3uvnCYzY1aAQERUkyo",
     "type": "message",
     "role": "assistant",
     "content": [
       {
+        "type": "thinking",
+        "thinking": "",
+        "signature": "CAQSrgcKEAgSGAI4AUIIdGhpbmtpbmcSDHi6CREt6+sJz4KqphoMMFs0M9uweifil73hIjCYouqgewaOQQJ4R7ERzLXYj5+vddu1m3iTd3OTwwdfhD+xLGBX2raWaQXi1Sc3/QwqywaiM5q6iTDPesG9xI93q5UqGSxD3CgartTWPa1aby7NhQL0zvW8k4+OH41O2pD7rEf6BovOTJNGfWP7ssbeELpj+oYgn/sLkkIx9JPFvbWAdPa8czElkJG1hxlVDZn7HqR33wsnHf0QmnZAcUA0+xDpHhI91qFqkuS/G3PYlua84WIbC6vAeAsAEr09/n9xPvu77Q4ItL7ISAtPcsMRZQ4MGMfu0sj/VhBentwSJV6dMpx7gQNkC17iydcdBD4RfrvaPjyz2OdIsmFEsetXvWEdX69I+00mPafzWWORtX8geCPdRRBqShkVkJjLlf2TiSSRCnCB8XSV0HRTKLEKBjfZds1HiXONw2Ipz6gwjuuQr+UPso0rvVJnH4yaRHAWzt84TW9SQSbYq1g3iaiUViWZ07DfECoQYHDO1/aGtQFd0k7KdyKC9gtAY0/X2ah40/tBKzQI8/E2HlsqmRckiFlUv3bviePlLf3uekHkLeLpN8BGuzpfPxawdyR3sWIn9wLB3xntY8iO00Z+qR+QsYlRqepBZONu75mk1Q6T5F8/zfnKIbM7XZw5/is7CCgL4EA+hQ6dyvR7GNLOoF2pMKQLVyec3Nc+uv3QVG0XhXsKMtIauseDGzG81i+31vUegQjwi8CIS3AZTD/YYDOn1tNnNrxU20kxBjDOKoBS4c+Ciow3Ukjm6hyUaEisw4c/M5RX13xO4Mi/1nSFmDCfSlaNPqmW37Bs3LaXXNhNUp29XM7Px1j30WWKVoFVe+LnQZ/qBhiyShse5PLK6Wzsh/K6CxTlouF55sIYzEiGz1nOnHnj+zBtHSgcK+ReS3sQGxL/M8I+gmxFZGC2LFqEC3ztgvtRUXaSS1OmS+4vXc8UA0+gYqMZOSXvspwLPvNbKxGXD1z19xU5D7QIBZOqTM5gGiCMgtdoAr8T7RCyLPDFTif0tDTKeXJNAp9zxhBGqUDk89Xpq7aRoRZzek4cOc/0MQdf6tydq7vndqyMD6LCZntvE5y46S6lnIuyRdSJlzWM14lBSCppzjCx9AJe6fRL6jO+awisNYNahXJkIYMRDFBDxxvcoHc3qDAheLeaM9NKWghcOZ5aUoZj/Hcgbh03C7uxGh0k5einf3sYAQ=="
+      },
+      {
         "type": "tool_use",
-        "id": "toolu_016GKjEeES8UW6V4Zg3P85bm",
+        "id": "toolu_018E2Gm3AkRWZkQyYqV52JpF",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -24,18 +29,18 @@
       },
       {
         "type": "tool_use",
-        "id": "toolu_013pdWug47v7DCVktBobyXyJ",
+        "id": "toolu_014PUuKjXnUjNjUaL3VPQ1y3",
         "name": "add_task",
         "caller": {
           "type": "direct"
         },
         "input": {
-          "title": "Review job post with Ana",
+          "title": "Review the job post with Ana",
           "assignee": "me",
           "due_date": "2026-10-16",
           "due_time": null,
           "project_id": "00000000-0000-4000-8000-000000000002",
-          "confidence": 0.75,
+          "confidence": 0.7,
           "source_quote": "let's review the job post for Hiring together next Friday"
         }
       }
@@ -45,20 +50,20 @@
     "stop_sequence": null,
     "stop_details": null,
     "usage": {
-      "input_tokens": 1951,
+      "input_tokens": 1950,
       "cache_creation_input_tokens": 0,
       "cache_read_input_tokens": 0,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
         "ephemeral_1h_input_tokens": 0
       },
-      "output_tokens": 469,
+      "output_tokens": 607,
       "service_tier": "standard",
       "inference_geo": "global",
       "iterations": [
         {
-          "input_tokens": 1951,
-          "output_tokens": 469,
+          "input_tokens": 1950,
+          "output_tokens": 607,
           "cache_read_input_tokens": 0,
           "cache_creation_input_tokens": 0,
           "cache_creation": {
@@ -70,7 +75,7 @@
         }
       ],
       "output_tokens_details": {
-        "thinking_tokens": 0
+        "thinking_tokens": 136
       }
     },
     "diagnostics": null,

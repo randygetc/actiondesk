@@ -40,13 +40,21 @@ export type TokenUsage = {
   cache_read_input_tokens?: number | null;
 };
 
+/**
+ * Responses can name a dated snapshot ("claude-haiku-4-5-20251001") for the
+ * alias we requested; price it as the alias.
+ */
+function priceKey(model: string): string {
+  return model.replace(/-\d{8}$/, "");
+}
+
 export function isKnownModel(model: string): boolean {
-  return model in PRICES;
+  return priceKey(model) in PRICES;
 }
 
 /** Cost in USD, from the API's usage numbers only (trust boundary 7). */
 export function costUsd(model: string, usage: TokenUsage): number {
-  const p = PRICES[model] ?? WORST_CASE;
+  const p = PRICES[priceKey(model)] ?? WORST_CASE;
   const cost =
     usage.input_tokens * p.input +
     usage.output_tokens * p.output +

@@ -1,13 +1,13 @@
 [
   {
-    "model": "claude-sonnet-5-5",
-    "id": "msg_011CfZ6NReEpTCBQjjkDDuLt",
+    "model": "claude-haiku-4-5-20251001",
+    "id": "msg_011CfZ6Fs8E2ruBUNdWMLBRs",
     "type": "message",
     "role": "assistant",
     "content": [
       {
         "type": "tool_use",
-        "id": "toolu_01BG1qbpLNfmM56mgGT4hrby",
+        "id": "toolu_01SScb12RCNEntDpdhUitS9Y",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -17,14 +17,14 @@
           "assignee": "me",
           "due_date": "2026-10-08",
           "due_time": null,
-          "project_id": "00000000-0000-4000-8000-000000000003",
-          "confidence": 0.9,
+          "project_id": null,
+          "confidence": 0.95,
           "source_quote": "Randy: write the release notes by Thursday"
         }
       },
       {
         "type": "tool_use",
-        "id": "toolu_01EpmisSEzqHfrgZfUyczqFv",
+        "id": "toolu_01GDhqZevquycA2hp8y5hyCp",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -45,33 +45,16 @@
     "stop_sequence": null,
     "stop_details": null,
     "usage": {
-      "input_tokens": 1982,
+      "input_tokens": 1851,
       "cache_creation_input_tokens": 0,
       "cache_read_input_tokens": 0,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
         "ephemeral_1h_input_tokens": 0
       },
-      "output_tokens": 441,
+      "output_tokens": 349,
       "service_tier": "standard",
-      "inference_geo": "global",
-      "iterations": [
-        {
-          "input_tokens": 1982,
-          "output_tokens": 441,
-          "cache_read_input_tokens": 0,
-          "cache_creation_input_tokens": 0,
-          "cache_creation": {
-            "ephemeral_5m_input_tokens": 0,
-            "ephemeral_1h_input_tokens": 0
-          },
-          "type": "message",
-          "model": null
-        }
-      ],
-      "output_tokens_details": {
-        "thinking_tokens": 0
-      }
+      "inference_geo": "not_available"
     },
     "diagnostics": null,
     "parsed_output": null

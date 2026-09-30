@@ -1,13 +1,18 @@
 [
   {
-    "model": "claude-sonnet-5-5",
-    "id": "msg_011CfZ6NdtgxWRfYKY5i9i2h",
+    "model": "claude-opus-5-5",
+    "id": "msg_011CfZ3tuyotSFAf7SZJBTNr",
     "type": "message",
     "role": "assistant",
     "content": [
       {
+        "type": "thinking",
+        "thinking": "",
+        "signature": "CAQS8gUKEAgSGAI4AUIIdGhpbmtpbmcSDPZt93oqVYkJGpWzzRoMjoKLxAjY8o3A0SKCIjBI0CcLabKeDhH/ddoejalBJ1/s6VLsbtHv8sN4sUqqcgRA6KPXrx430cjk9/zhmT4qjwVx8DAXOtcyXZ07lyF386bjtvzNOU7KhmkfVdtJ1EbHYCpg+Rtc5X/wJz3RxuqouE58N4cp9vARZFScnR+WHnItKK0dta7pDN6nGGpsp3vQfPWdR3WoVzl5c7sUryXT4pzQaELHJQYiTe9eWoVoxcFf0SOsfqNlW+r7paJvdiXzU8bLI/+6AsSFnEablAPYOnbHMPpZT+FtizvaK7bvwu+sWYJ9kcyp1cRYxAlCjVIODhyUeBhfYBZMjnsF/uOirM9LT0zgJz+4PYp080Hymo96DhyYxQxQgyacEqGy0AZyOXEi28owvuWs8/KkacBN2xLKyjndXxK3bA+yObEvm1MWJQbW0ANpMYjM6BH6VCR5qaH7d4BvfctftkJneIoAyncg5VTrlWmSOMixPzA7ClKI576+5OBVSd8FkaVzoese++da2fAjvuJu+HlEnW74O0HGnoiIKTrSHcEs2TQcQRyzVrRO7k2y3S+y7+VMSxGLBww+/jQPxx5IgBryBuEe+yLtEiRUMDy5zmmSWgbzKjESRTHXRIhTdiRzfbetZdKrrrp7hwOlahAFrFLE3VM4dcdZlh2x2piJLlHjTW7ZzNFkmktVCdn0Cqvpg0cgwD0lTensxLBhvTyYO4oDpz5VDuZZWITqPlW05QVyf7PMlbAjBiynt/ju0o5ReCD2gvn8kbdL9Cl/YTs6/d2UbG/77bjb47tjO6UQan9H1ZH9G7L5lc80YB/Sci872QMKv6ZjivPSjFfSxPDbgF/Mw8DfUcNMLD8ljPgJDS6ordWg64aFmYWxGRan5v3fCIwV/D4Z5oJv5juEbw5v/1S9FA6an+YQbRvmBanDyS7TVbzhCOiSRe2ohzEb7thRKRD7ZPeiGAE="
+      },
+      {
         "type": "tool_use",
-        "id": "toolu_01LEi9UzvyDJ53m6G3gBQ4Ky",
+        "id": "toolu_012WqHGWVWdecQRdRaCEzsQq",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -18,13 +23,13 @@
           "due_date": "2026-10-08",
           "due_time": null,
           "project_id": null,
-          "confidence": 0.9,
+          "confidence": 0.95,
           "source_quote": "Ana: update the roadmap slides by Thursday"
         }
       },
       {
         "type": "tool_use",
-        "id": "toolu_018bZLSdHKfJQhiFsofBCZwY",
+        "id": "toolu_01GyUHXcC3yrrZfRiK5usKv2",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -35,13 +40,13 @@
           "due_date": "2026-10-08",
           "due_time": null,
           "project_id": null,
-          "confidence": 0.9,
+          "confidence": 0.95,
           "source_quote": "Randy: write the release notes by Thursday"
         }
       },
       {
         "type": "tool_use",
-        "id": "toolu_01E6gZKtEQBCVnbThUeCoyPx",
+        "id": "toolu_012imf4DMVBocnHiEeQNwkY1",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -52,24 +57,24 @@
           "due_date": "2026-10-07",
           "due_time": null,
           "project_id": null,
-          "confidence": 0.9,
+          "confidence": 0.95,
           "source_quote": "Carlo: QA the mobile build tomorrow"
         }
       },
       {
         "type": "tool_use",
-        "id": "toolu_013sL4WJaPygZU1U7zsTzXWG",
+        "id": "toolu_01GNqiyjCy2beiotLjPXNGAb",
         "name": "add_task",
         "caller": {
           "type": "direct"
         },
         "input": {
-          "title": "Pick a date for the beta webinar",
+          "title": "Pick a date for the beta webinar with Joy",
           "assignee": "me",
           "due_date": null,
           "due_time": null,
           "project_id": null,
-          "confidence": 0.85,
+          "confidence": 0.9,
           "source_quote": "Randy and Joy: pick a date for the beta webinar"
         }
       }
@@ -79,20 +84,20 @@
     "stop_sequence": null,
     "stop_details": null,
     "usage": {
-      "input_tokens": 1975,
+      "input_tokens": 1981,
       "cache_creation_input_tokens": 0,
       "cache_read_input_tokens": 0,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
         "ephemeral_1h_input_tokens": 0
       },
-      "output_tokens": 856,
+      "output_tokens": 957,
       "service_tier": "standard",
       "inference_geo": "global",
       "iterations": [
         {
-          "input_tokens": 1975,
-          "output_tokens": 856,
+          "input_tokens": 1981,
+          "output_tokens": 957,
           "cache_read_input_tokens": 0,
           "cache_creation_input_tokens": 0,
           "cache_creation": {
@@ -104,7 +109,7 @@
         }
       ],
       "output_tokens_details": {
-        "thinking_tokens": 0
+        "thinking_tokens": 96
       }
     },
     "diagnostics": null,

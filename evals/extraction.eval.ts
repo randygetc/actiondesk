@@ -1,7 +1,8 @@
 // Extraction eval (plan §3.7).
 //   npm run eval                  replays recorded.json (no key, deterministic)
 //   EVAL_LIVE=1 npm run eval      calls the API and rewrites recorded.json
-// EVAL_MODEL=<id> overrides the extraction model in live mode (step 2.4).
+// EVAL_MODEL=<id> runs another model (step 2.4), with its own recordings in
+// recorded.<id>.json, so CI keeps scoring the production model's recorded.json.
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -28,11 +29,14 @@ const live = !!process.env.EVAL_LIVE;
 function config(): ModelConfig {
   const model = process.env.EVAL_MODEL;
   if (!model) return EXTRACT_MODEL;
-  // Haiku 4.5 rejects the effort parameter (claude-api docs).
+  const haiku = model.startsWith("claude-haiku");
   return {
     ...EXTRACT_MODEL,
     model,
-    effort: model.startsWith("claude-haiku") ? undefined : EXTRACT_MODEL.effort,
+    // Haiku 4.5 rejects effort and has no adaptive thinking (claude-api docs);
+    // the server-side fallback is documented for the 5.x models only.
+    effort: haiku ? undefined : EXTRACT_MODEL.effort,
+    fallbacks: haiku ? false : EXTRACT_MODEL.fallbacks,
   };
 }
 
@@ -62,7 +66,8 @@ type CaseStats = {
 const stats: CaseStats[] = [];
 
 const extractor: Extractor = async (c) => {
-  const file = join(c.dir, "recorded.json");
+  const model = process.env.EVAL_MODEL;
+  const file = join(c.dir, model ? `recorded.${model}.json` : "recorded.json");
   let messages: LlmMessage[] = [];
   let client;
   if (live) {
