@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   describeRecurrence,
+  ruleTime,
   nextOccurrence,
   parseRRule,
   toRRule,
@@ -116,5 +117,46 @@ describe("nextOccurrence (completed late, D-7)", () => {
         at("2026-10-24"),
       ),
     ).toEqual(at("2026-11-06"));
+  });
+});
+
+describe("intended local time in the rule (BYHOUR/BYMINUTE)", () => {
+  it("round-trips the time with any preset", () => {
+    const rule = toRRule(
+      { kind: "monthlyNth", nth: 2, day: "TU" },
+      { hour: 9, minute: 5 },
+    );
+    expect(rule).toBe("FREQ=MONTHLY;BYDAY=2TU;BYHOUR=9;BYMINUTE=5");
+    expect(parseRRule(rule)).toEqual({ kind: "monthlyNth", nth: 2, day: "TU" });
+    expect(ruleTime(rule)).toEqual({ hour: 9, minute: 5 });
+    expect(describeRecurrence(rule)).toBe("Monthly on the 2nd Tuesday");
+  });
+
+  it("returns no time for a rule without one", () => {
+    expect(ruleTime("FREQ=DAILY")).toBeNull();
+  });
+
+  it.each([
+    "FREQ=DAILY;BYHOUR=24;BYMINUTE=0",
+    "FREQ=DAILY;BYHOUR=2;BYMINUTE=60",
+    "FREQ=DAILY;BYHOUR=02;BYMINUTE=30",
+    "FREQ=DAILY;BYHOUR=2",
+    "FREQ=DAILY;BYMINUTE=30;BYHOUR=2",
+    "FREQ=YEARLY;BYHOUR=2;BYMINUTE=30",
+  ])("rejects %j (mirrors the DB check)", (rule) => {
+    expect(parseRRule(rule)).toBeNull();
+    expect(ruleTime(rule)).toBeNull();
+  });
+
+  it("uses the rule's time, not the previous occurrence's", () => {
+    // Previous occurrence was moved to 10:00 by hand; the rule says 09:00.
+    const prev = toUtc("2026-10-06", "10:00", LA);
+    const next = nextOccurrence(
+      "FREQ=DAILY;BYHOUR=9;BYMINUTE=0",
+      LA,
+      prev,
+      prev,
+    );
+    expect(next).toEqual(toUtc("2026-10-07", "09:00", LA));
   });
 });

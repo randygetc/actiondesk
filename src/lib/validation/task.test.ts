@@ -66,23 +66,50 @@ describe("taskFormSchema", () => {
   });
 
   it.each([
-    [{ repeat: "daily" }, "FREQ=DAILY"],
-    [{ repeat: "weekdays" }, "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR"],
-    [{ repeat: "weekly", weekday: "TU" }, "FREQ=WEEKLY;BYDAY=TU"],
+    [{ repeat: "daily" }, "FREQ=DAILY;BYHOUR=23;BYMINUTE=59"],
+    [
+      { repeat: "weekdays" },
+      "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;BYHOUR=23;BYMINUTE=59",
+    ],
+    [
+      { repeat: "weekly", weekday: "TU" },
+      "FREQ=WEEKLY;BYDAY=TU;BYHOUR=23;BYMINUTE=59",
+    ],
     [
       { repeat: "everyNWeeks", interval: "2", weekday: "FR" },
-      "FREQ=WEEKLY;INTERVAL=2;BYDAY=FR",
+      "FREQ=WEEKLY;INTERVAL=2;BYDAY=FR;BYHOUR=23;BYMINUTE=59",
     ],
-    [{ repeat: "monthlyDay", monthDay: "15" }, "FREQ=MONTHLY;BYMONTHDAY=15"],
-    [{ repeat: "monthlyDay", monthDay: "-1" }, "FREQ=MONTHLY;BYMONTHDAY=-1"],
+    [
+      { repeat: "monthlyDay", monthDay: "15" },
+      "FREQ=MONTHLY;BYMONTHDAY=15;BYHOUR=23;BYMINUTE=59",
+    ],
+    [
+      { repeat: "monthlyDay", monthDay: "-1" },
+      "FREQ=MONTHLY;BYMONTHDAY=-1;BYHOUR=23;BYMINUTE=59",
+    ],
     [
       { repeat: "monthlyNth", nth: "2", weekday: "TU" },
-      "FREQ=MONTHLY;BYDAY=2TU",
+      "FREQ=MONTHLY;BYDAY=2TU;BYHOUR=23;BYMINUTE=59",
     ],
   ])("builds the RRULE for %j", (fields, rrule) => {
     expect(parse({ dueDate: "2026-10-06", ...fields }).data?.recurrence).toBe(
       rrule,
     );
+  });
+
+  it("stores the entered time in the rule (step 1.8)", () => {
+    expect(
+      parse({ dueDate: "2026-03-07", dueTime: "02:30", repeat: "daily" }).data
+        ?.recurrence,
+    ).toBe("FREQ=DAILY;BYHOUR=2;BYMINUTE=30");
+    expect(
+      parse({
+        dueDate: "2026-03-07",
+        dueTime: "00:05",
+        repeat: "weekly",
+        weekday: "SA",
+      }).data?.recurrence,
+    ).toBe("FREQ=WEEKLY;BYDAY=SA;BYHOUR=0;BYMINUTE=5");
   });
 
   it.each([

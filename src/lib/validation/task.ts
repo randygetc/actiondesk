@@ -9,7 +9,7 @@ import {
   type Preset,
   type Weekday,
 } from "@/lib/time/recurrence";
-import { isValidDate } from "@/lib/time/zones";
+import { END_OF_DAY, isValidDate } from "@/lib/time/zones";
 
 export const TASK_STATUSES = ["todo", "doing", "done"] as const;
 export const TASK_PRIORITIES = ["low", "normal", "high", "urgent"] as const;
@@ -90,8 +90,13 @@ export const taskFormSchema = z
     recurrence: presetFrom(v),
   }));
 
+/**
+ * The RRULE for the chosen preset, carrying the intended local time (the
+ * entered time, or end of day), so DST gaps can't shift later occurrences.
+ */
 function presetFrom(v: {
   repeat: (typeof REPEAT_KINDS)[number];
+  dueTime?: string | null;
   weekday?: Weekday | null;
   interval?: number | null;
   monthDay?: number | null;
@@ -112,7 +117,9 @@ function presetFrom(v: {
               : v.repeat === "monthlyNth"
                 ? { kind: "monthlyNth", nth: v.nth!, day }
                 : null;
-  return preset ? toRRule(preset) : null;
+  if (!preset) return null;
+  const [hour, minute] = (v.dueTime ?? END_OF_DAY).split(":").map(Number);
+  return toRRule(preset, { hour, minute });
 }
 
 export type TaskForm = z.output<typeof taskFormSchema>;
