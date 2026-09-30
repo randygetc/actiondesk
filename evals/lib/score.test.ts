@@ -28,14 +28,18 @@ describe("titleSimilarity", () => {
     ).toBe(1);
   });
 
-  it("scores partial overlap as Jaccard", () => {
-    // {send, homepage, copy, design} vs {send, homepage, copy, design, team}
+  it("scores overlap against the shorter title", () => {
+    // {sign, vendor, contract, send, back, ana} vs {sign, return, vendor, contract}: 3 of 4.
     expect(
       titleSimilarity(
-        "Send homepage copy to design",
-        "Send the homepage copy to the design team",
+        "Sign the vendor contract and send it back to Ana",
+        "Sign and return the vendor contract",
       ),
-    ).toBeCloseTo(0.8);
+    ).toBeCloseTo(0.75);
+  });
+
+  it("doesn't pair titles that share only a verb", () => {
+    expect(titleSimilarity("Send the deck", "Send the report")).toBe(0.5);
   });
 
   it("scores unrelated titles 0", () => {

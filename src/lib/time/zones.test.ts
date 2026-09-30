@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { toLocalParts, toUtc } from "./zones";
+import { calendar, toLocalParts, toUtc } from "./zones";
 
 const LA = "America/Los_Angeles";
 
@@ -40,5 +40,18 @@ describe("toLocalParts", () => {
       date: "2026-10-08",
       time: "14:30",
     });
+  });
+});
+
+describe("calendar", () => {
+  it("lists local days with weekdays, starting today in the zone", () => {
+    // 2026-10-05T20:00Z is already Tue Oct 6 in Manila.
+    expect(
+      calendar(new Date("2026-10-05T20:00:00Z"), "Asia/Manila", 3),
+    ).toEqual([
+      { date: "2026-10-06", weekday: "Tue" },
+      { date: "2026-10-07", weekday: "Wed" },
+      { date: "2026-10-08", weekday: "Thu" },
+    ]);
   });
 });

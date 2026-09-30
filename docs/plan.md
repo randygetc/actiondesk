@@ -2,7 +2,7 @@
 
 Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.md.
 
-- **Last updated:** 2026-09-30 (step 2.1: Phase 2 detailed, streaming spike)
+- **Last updated:** 2026-09-30 (step 2.3: extraction)
 - **Sources:** CLAUDE.md, docs/architecture.md, docs/adr/0001–0005, docs/KICKOFF.md, guardrails/, .claude/
 - **Scope:** Phases 1 and 2 are in full detail. Phase 3 is outlined and gets detailed in step 3.1.
 - **Needs your decision:** the owner items in §7 (risks and gaps in the guardrails). All §6 decisions are made.
@@ -22,8 +22,9 @@ Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.
 | 1.9 | CI | done (PR #10); `ci` is a required check on `main` |
 | P1 | Phase 1 checkpoint | done; summary in §0.1. Owner: friction debrief in docs/learnings.md |
 | 2.1 | Phase 2 plan + streaming spike | done (PR #12); spike passed (§3.1), no ADR; D-19–D-21 decided |
-| 2.2 | Evals first | PR open on `phase2/evals`: 19 cases **drafted by Claude at the owner's request** (KICKOFF has the owner write them; owner reviews `expected.json`); runner, scorer and CI step done. Scores start at 2.3 |
-| 2.3–2.8 | LLM features | detailed in §3.9; not started |
+| 2.2 | Evals first | done (PR #13); 19 cases **drafted by Claude at the owner's request** (KICKOFF has the owner write them; owner reviews `expected.json`) |
+| 2.3 | Extraction | PR open on `phase2/extraction`: live eval 98% on claude-opus-5-5 ($0.0175/case), see docs/learnings.md |
+| 2.4–2.8 | LLM features | detailed in §3.9; not started |
 | 3.x | Workspaces, jobs, prod | outline only |
 
 ### 0.1 Phase 1 summary (2026-09-30)
@@ -471,7 +472,7 @@ Every file imports `server-only`. `client.ts` is the only SDK import (R2).
 - **Runner:** `evals/extraction.eval.ts` in the existing Vitest `eval` project (R-6). Loader, scorer and report live in `evals/lib/`, tested in the unit project. It takes an `Extractor` function; until 2.3 every case shows "no recording".
   - **Recorded mode (default):** replays `recorded.json` through the real `extract.ts` via a fake `LlmClient`. Deterministic, with no key.
   - **Live mode** (`EVAL_LIVE=1 npm run eval`): calls the API, rewrites `recorded.json`, and logs usage.
-- **Matching:** greedy one-to-one pairing of extracted to expected tasks by title similarity (normalized token overlap ≥ 0.5).
+- **Matching:** greedy one-to-one pairing of extracted to expected tasks by title similarity: the share of the shorter title's words found in the other, ≥ 0.6. (Changed at 2.3 from Jaccard ≥ 0.5, which failed to pair correct but longer titles.)
 - **Scores per case:**
   - title (matched pairs);
   - assignee (case-insensitive);

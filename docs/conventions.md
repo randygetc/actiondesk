@@ -128,3 +128,27 @@ Versions: Next 16.3, React 19.2, TypeScript 5.9, Tailwind 4, Zod 4, Vitest 5, @s
 - **`npm run eval` passes `--silent=false`**, because Vitest hides console output from passing tests.
 - **The score is a metric, not a gate:** the eval fails only when a case can't be loaded or run.
   If you want a minimum score, set it at 2.4, once real numbers exist.
+
+## LLM calls (step 2.3, 2026-09-30)
+- **App code calls `llmClient()`** from `src/lib/llm`. It returns the SDK client, or the fake one when
+  `LLM_FAKE=1` outside production. Only `src/lib/llm/client.ts` imports `@anthropic-ai/sdk`.
+- **Requests use the beta namespace** (`client.beta.messages.stream`) because of the refusal fallback
+  (`fallbacks: "default"`, beta `server-side-fallback-2026-07-01`). Usage is logged against
+  `message.model`, the model that actually answered.
+- **Tools are `strict: true` with `tool_choice: auto`.** Forced tool choice is a 400 on current
+  models. `eager_input_streaming` stays off: tool inputs here are small, and buffered input keeps
+  the API's schema check. Every tool input is still Zod-parsed before use.
+- **Extraction is one API call** when every `add_task` call is valid. We don't send a follow-up turn
+  to let the model continue, so it must emit all tasks in one response. Recall on the eval says it
+  does (2.3: 37/37 tasks found). Invalid calls get one retry turn with the Zod error.
+- **Notes go inside a random tag** (`<note-1a2b…>`), so note text can't close the tag.
+- **Usage:** `usageMeter()` collects each final message; `recordUsage()` runs in `finally` and never
+  throws. Log field names avoid "token" (the logger redacts it): `inputTok`, `outputTok`, `cachedTok`.
+- **Prompts are versioned** (`EXTRACT_PROMPT_VERSION`). Bump it on any prompt change; it's stored in
+  `llm_usage.prompt_version` and should be noted in docs/learnings.md with the new score.
+- **Actions called with JSON** (not a form), like `saveReviewedTasks(rows)`, take `unknown` and parse
+  it with Zod first. Streaming actions return an async generator whose first event is an `error`
+  on bad input or a signed-out user.
+- **e2e and the fake model:** Playwright's own dev server gets `LLM_FAKE=1`. Pages that call the LLM
+  set `data-llm="fake|live"`, and their e2e tests skip unless it's `fake`, so a reused local dev
+  server never spends API money.

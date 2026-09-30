@@ -42,6 +42,8 @@ export default defineConfig({
           name: "eval",
           include: ["evals/**/*.eval.ts"],
           environment: "node",
+          // Live mode (EVAL_LIVE=1) reads ANTHROPIC_API_KEY from .env.local.
+          setupFiles: ["test/load-env.ts"],
         },
       },
     ],

@@ -17,6 +17,9 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
     command: "npm run dev",
+    // Extraction uses the fake model in e2e (R-21). A reused local dev server
+    // doesn't get this, so capture tests check data-llm and skip without it.
+    env: { LLM_FAKE: "1" },
     url: `${baseURL}/login`,
     reuseExistingServer: !process.env.CI,
   },
