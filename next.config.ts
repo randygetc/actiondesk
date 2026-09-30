@@ -7,14 +7,13 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
   experimental: {
     serverActions: {
-      // Attachments are up to 10 MB (plan §3.6), plus multipart overhead.
-      // Vercel caps function request bodies at 4.5 MB regardless (R-22).
-      bodySizeLimit: "11mb",
+      // Attachments are up to 4 MB plus multipart overhead, which is what
+      // Vercel's 4.5 MB request body cap allows (R-22, D-22). Every other
+      // action is small, so this is the only reason to raise the 1 MB default.
+      bodySizeLimit: "4.5mb",
     },
-    // The proxy (src/proxy.ts) buffers request bodies too, and cuts them at
-    // 10 MB by default, which truncated uploads just over the limit.
-    proxyClientMaxBodySize: "11mb",
   },
+
 };
 
 export default nextConfig;

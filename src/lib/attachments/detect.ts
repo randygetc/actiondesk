@@ -3,7 +3,13 @@
 
 import { checkDocx } from "./zip";
 
-export const MAX_BYTES = 10 * 1024 * 1024;
+/**
+ * 4 MB so an upload fits Vercel's 4.5 MB function request body (R-22, owner
+ * decision D-22: Option B of the proposed ADR 0007, which was not adopted).
+ */
+export const MAX_MB = 4;
+export const MAX_BYTES = MAX_MB * 1024 * 1024;
+export const SIZE_ERROR = `Files can be at most ${MAX_MB} MB.`;
 
 export type FileKind = "pdf" | "docx" | "txt" | "vtt" | "srt";
 
@@ -36,7 +42,7 @@ export function decodeText(b: Uint8Array): string | null {
 export function detectFile(b: Uint8Array): Detected {
   if (b.length === 0) return { ok: false, error: "The file is empty." };
   if (b.length > MAX_BYTES)
-    return { ok: false, error: "Files can be at most 10 MB." };
+    return { ok: false, error: SIZE_ERROR };
 
   // %PDF-
   if (startsWith(b, [0x25, 0x50, 0x44, 0x46, 0x2d]))

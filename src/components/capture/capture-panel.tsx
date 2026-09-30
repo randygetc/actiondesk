@@ -11,6 +11,7 @@ import type {
 import type { ActionResult } from "@/lib/action-result";
 import { fieldClass } from "@/components/tasks/types";
 import { Button } from "@/components/ui/button";
+import { MAX_MB, SIZE_ERROR } from "@/lib/attachments/detect";
 import type { ExtractedTask, ReviewedTask } from "@/lib/validation/extraction";
 
 // Everything here renders model output as plain text (trust boundary 2):
@@ -103,7 +104,7 @@ export function CapturePanel({
         // A too-large body can fail before the action runs (platform limits).
         const uploaded = await upload(form).catch((): UploadResult => ({
           ok: false,
-          error: "Couldn't upload the file. Files can be at most 10 MB.",
+          error: `Couldn't upload the file. ${SIZE_ERROR}`,
         }));
         if (!uploaded.ok) {
           setError(uploaded.error);
@@ -226,7 +227,8 @@ export function CapturePanel({
             </Button>
           ) : null}
           <span className="text-muted-foreground">
-            PDF, Word, .txt, .vtt or .srt, up to 10 MB. Deleted after review.
+            PDF, Word, .txt, .vtt or .srt, up to {MAX_MB} MB. Deleted after
+            review.
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-4">

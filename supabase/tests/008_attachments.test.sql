@@ -1,7 +1,7 @@
 -- attachments rows and their storage objects (step 2.7): own-folder only.
 begin;
 \ir helpers/auth.psql
-select plan(20);
+select plan(21);
 
 select tests.create_user('a@example.com') as a \gset
 select tests.create_user('b@example.com') as b \gset
@@ -31,9 +31,9 @@ select throws_ok(
 );
 select throws_ok(
   format($$ insert into public.attachments (id, storage_path, mime_type, size_bytes)
-            values (%L, %L, 'application/pdf', 10485761) $$, :'idb', :'a' || '/' || :'idb' || '.pdf'),
+            values (%L, %L, 'application/pdf', 4194305) $$, :'idb', :'a' || '/' || :'idb' || '.pdf'),
   '23514', null,
-  'more than 10 MB is rejected'
+  'more than 4 MB is rejected'
 );
 select throws_ok(
   format($$ insert into public.attachments (id, storage_path, mime_type, size_bytes)
@@ -126,6 +126,11 @@ select is(
   (select public from storage.buckets where id = 'attachments'),
   false,
   'the attachments bucket is private'
+);
+select is(
+  (select file_size_limit from storage.buckets where id = 'attachments'),
+  4194304::bigint,
+  'the bucket limit matches the 4 MB app limit (R-22)'
 );
 select is(
   (select relrowsecurity from pg_class where oid = 'public.attachments'::regclass),
