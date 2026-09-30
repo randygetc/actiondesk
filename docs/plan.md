@@ -2,7 +2,7 @@
 
 Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.md.
 
-- **Last updated:** 2026-09-30 (step 1.9: CI)
+- **Last updated:** 2026-09-30 (Phase 1 done)
 - **Sources:** CLAUDE.md, docs/architecture.md, docs/adr/0001–0005, docs/KICKOFF.md, guardrails/, .claude/
 - **Scope:** Phase 1 is in full detail. Phases 2 and 3 are outlined and get detailed in steps 2.1 and 3.1.
 - **Needs your decision:** the owner items in §7 (risks and gaps in the guardrails). All §6 decisions are made.
@@ -19,9 +19,42 @@ Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.
 | 1.6 | Projects CRUD (vague prompt) | done (PR #7) |
 | 1.7 | Tasks CRUD (full spec) | done (PR #8); library: temporal-polyfill (R-8), date-only = 23:59 local |
 | 1.8 | Timezone edge cases | done (PR #9); found spring-forward drift, fixed by storing the local time in the rule (owner decision) |
-| 1.9 | CI | PR open on `phase1/ci`: `.github/workflows/ci.yml`, no secrets; owner makes `ci` a required check |
+| 1.9 | CI | done (PR #10); `ci` is a required check on `main` |
+| P1 | Phase 1 checkpoint | done; summary in §0.1. Owner: friction debrief in docs/learnings.md |
 | 2.x | LLM features | outline only |
 | 3.x | Workspaces, jobs, prod | outline only |
+
+### 0.1 Phase 1 summary (2026-09-30)
+
+**Built:**
+- Google sign-in, profiles with timezone, and a settings page.
+- Projects CRUD with archive and restore.
+- Tasks CRUD:
+  - due dates entered in the profile timezone and stored as UTC;
+  - six recurrence presets;
+  - `complete_task()` that is atomic and idempotent;
+  - list grouped as Overdue / Today / This week / Later.
+- 4 migrations, each with RLS and pgTAP (103 assertions).
+- Tests: 138 unit, 1 concurrent DB test (`complete_task`), 15 Playwright e2e.
+- CI (`ci.yml`), a required check alongside `guardrails`.
+
+**Checkpoint:**
+- Google sign-in verified by hand on 2026-09-30.
+- All the time zone tests pass, and CI is green.
+- All four violations in 1.4 were caught by CI (PR #6).
+
+**What changed from the plan:**
+- **Middleware became `src/proxy.ts`** because Next 16 renamed it. It refreshes the session only; it doesn't authorize.
+- **Recurrence rules now carry their local time** (`BYHOUR`/`BYMINUTE`, migration `20260930003644`). This was added in 1.8 after a spring-forward bug: 02:30 shifted to 03:30 in every later occurrence.
+- **1.4 ran after 1.5** (D-9), so there was a migration on `main` to edit.
+- **New Vitest `db` project** (`npm run test:db`) for the concurrent `complete_task` test, which pgTAP can't express. CI runs it too.
+- **CI pins the Supabase CLI** (2.118.0) and uses placeholder Google OAuth values; no secrets needed.
+
+**Open issues carried into Phase 2:**
+- Owner: R-1 (no hook blocks editing migrations during the session) and R-2 (architecture.md §6 names an ESLint rule that doesn't exist).
+- R-3 still stands; client components must stay in `src/components/`.
+- R-9: no foreign-key or `due_at` indexes until measured at 3.7.
+- The 2.x steps are outline only; step 2.1 details them.
 
 ## 1. Conventions this plan assumes
 
@@ -469,7 +502,7 @@ Items marked **(owner)** involve locked files that I can't and won't change.
 | R-1 **(owner)** | `.claude/hooks/guard.sh` only blocks `rm -rf`. It doesn't block edits to committed migrations, which ADR-0005 says it does. architecture.md §6 names `.claude/hooks/protect-migrations.sh`, which doesn't exist. | CI (`check.sh`) still catches it. Consider extending guard.sh and fixing the §6 name. |
 | R-2 **(owner)** | architecture.md §6 lists "ESLint `no-restricted-imports`" for R2 and R3, but there is no ESLint config, and one created at 1.3 would be editable by Claude. dependency-cruiser is the real enforcement. | Either add the ESLint config to the locked paths after 1.3, or drop that row from §6. |
 | R-3 **(owner)** | dependency-cruiser R6 only covers `src/components/`. A `"use client"` file under `src/app/` that imports `src/lib/llm/` is caught only by the `server-only` build error, and only for files that import `server-only` directly. | Keep every server-only module importing `server-only` (the required rule enforces this for llm and admin). Put client components in `src/components/`. |
-| R-4 **(owner)** | `.github/CODEOWNERS` still has the placeholder username (step 1.2). | Owner fixes it in 1.2. |
+| R-4 | ~~CODEOWNERS placeholder username~~ | Resolved in 1.2: `@randygetc`. |
 | R-5 | Streaming vs R5 (§5). | Spike at 2.1; ADR if needed. |
 | R-6 | `server-only` throws outside the `react-server` condition, so Vitest and `npm run eval` can't import `src/lib/llm` directly. | Alias `server-only` to a no-op in the Vitest config; run evals through Vitest or with `--conditions=react-server`. Never remove the import to make a test pass. |
 | R-7 | The digest Edge Function (Deno) needs Zod schemas and prompts that live in `src/lib/`. | Duplicate a small digest schema in `supabase/functions/_shared/` for now; ADR if sharing is wanted. |
