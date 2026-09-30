@@ -213,3 +213,10 @@ Versions: Next 16.3, React 19.2, TypeScript 5.9, Tailwind 4, Zod 4, Vitest 5, @s
   control case that should propose, so the gate can't pass trivially.
 - When a forbidden-phrase check fails, read the answer before blaming the model. Quoting a
   malicious title is correct behavior.
+
+## Workspace scoping (step 3.1 plan, applies from 3.2)
+- **RLS is the authority; the current workspace is a filter.** Every list query adds
+  `.eq("workspace_id", current.id)`. Without it a user would see the union of all their workspaces.
+  RLS decides what they may see or change at all.
+- **Policies call `my_workspaces(min_role)`,** never `workspace_members` directly. That avoids
+  recursion, and it's evaluated once per statement.

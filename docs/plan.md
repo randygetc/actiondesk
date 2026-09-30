@@ -2,9 +2,9 @@
 
 Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.md.
 
-- **Last updated:** 2026-09-30 (Phase 2 done)
+- **Last updated:** 2026-09-30 (step 3.1: Phase 3 plan)
 - **Sources:** CLAUDE.md, docs/architecture.md, docs/adr/0001–0005, docs/KICKOFF.md, guardrails/, .claude/
-- **Scope:** Phases 1 and 2 are done and in full detail. Phase 3 is outlined and gets detailed in step 3.1.
+- **Scope:** Phases 1 and 2 are done. Phase 3 is detailed in §4 (3.1).
 - **Needs your decision:** the owner items in §7 (risks and gaps in the guardrails). All §6 decisions are made.
 
 ## 0. Status
@@ -30,7 +30,8 @@ Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.
 | 2.7 | Attachments | done (PR #18) |
 | 2.8 | Injection hardening | done (PR #19): Ask injection eval (gate); security review, 8 findings fixed, 5 deferred (§7) |
 | P2 | Phase 2 checkpoint | done; summary in §0.2. Owner: friction debrief in docs/learnings.md |
-| 3.x | Workspaces, jobs, prod | outline only |
+| 3.1 | Phase 3 plan | PR open on `phase3/plan`: workspaces refactor detailed (§4); D-23–D-25 decided |
+| 3.2–3.12 | Workspaces, jobs, prod | detailed in §4; not started |
 
 ### 0.1 Phase 1 summary (2026-09-30)
 
@@ -608,53 +609,119 @@ KICKOFF order, with three changes: usage logging and the `tasks` columns move to
 
 ---
 
-## 4. Phase 3 — Workspaces, background jobs, production (outline; detailed at 3.1)
+## 4. Phase 3 — Workspaces, background jobs, production (detailed at 3.1, 2026-09-30)
 
-### Data model
+Goal (KICKOFF): workspaces with roles, safe migration of existing data, realtime updates, weekly AI digest, MFA-protected destructive actions, performance at 100k tasks, observability, production deploy, and an incident drill. Owner decisions for this phase: D-16 to D-18 and D-23 to D-25 (§6).
 
-- `workspaces`:
-  - `id`, `name`, `created_by`, `created_at`, `deleted_at` (D-17);
-  - `daily_llm_cap_usd numeric null` (null means the default).
-- `workspace_members`: `(workspace_id, user_id)` PK, `role` enum (`owner` | `member` | `viewer`), `created_at`.
-- `invites`:
-  - columns: `id`, `workspace_id`, `email`, `role`, `token_hash`, `invited_by`, `expires_at`, `accepted_at`, `accepted_by`;
-  - acceptance goes through `accept_invite(token)`, a `security definer` function that checks the expiry, a single use and that the email matches the signed-in user (D-16).
-- `digest_runs`: `id`, `workspace_id`, `week_start date`, `status` (`pending` | `sent` | `skipped` | `failed`), `attempts`, `sent_at`, `error_code`. `unique (workspace_id, week_start)`, so a resumed batch never re-sends.
-- `projects`, `tasks`, `attachments` and `llm_usage` gain `workspace_id not null`. Tasks gain `assignee_id` (→ a member) alongside `assignee_text`.
+### 4.1 Data model
+- **`workspaces`:** `id`, `name` (1–100), `created_by → profiles`, `created_at`, `updated_at`, `deleted_at` (D-17).
+- **`workspace_members`:** PK `(workspace_id, user_id)`, `role workspace_role` (`owner` | `member` | `viewer`), `created_at`. Plus a trigger that refuses to remove or demote the **last owner**.
+- **`invites`** (built at 3.3):
+  - `id`, `workspace_id`, `email` (lowercased), `role` (member | viewer; owners are promoted, not invited),
+  - `token_hash bytea` (sha256 of 32 random bytes; only the hash is stored),
+  - `invited_by`, `created_at`, `expires_at` (7 days), `accepted_at`, `accepted_by`.
+- **`projects`** gets `workspace_id not null`:
+  - `unique (id, workspace_id)` replaces `unique (id, owner_id)`;
+  - the name index becomes `(workspace_id, lower(name))`.
+- **`tasks`** gets `workspace_id not null`:
+  - the composite FK becomes `(project_id, workspace_id) → projects (id, workspace_id)`;
+  - `assignee_id → profiles`, null, checked by a trigger to be a member of the task's workspace.
+- **`llm_usage`** gets `workspace_id null`: null for Ask and history, set for extraction when saved. It's for reporting only (D-25).
+- **`owner_id` stays** on `projects` and `tasks`, meaning *creator*. It isn't renamed or dropped: that keeps rollback a policy-only change and keeps the history. `attachments` are unchanged (D-24).
 
-### Membership helper
+### 4.2 Membership helpers and recursion
+- `role_rank(workspace_role) → int` (viewer 1, member 2, owner 3), immutable.
+- `my_workspaces(min_role) → setof uuid`: `security definer`, `stable`, `search_path = ''`. It returns the workspace ids where `auth.uid()` has at least `min_role`, excluding soft-deleted workspaces.
+- **Policies use the set form:** `using (workspace_id in (select public.my_workspaces('viewer')))`.
+  - Postgres evaluates the subquery once per statement (an initplan), not once per row. That's the performance concern KICKOFF 3.7 names, designed in rather than fixed later. 3.7 still measures it.
+- **Recursion:** policies on `workspace_members` would normally query `workspace_members`, which would invoke its own policy again. `my_workspaces()` is `security definer`, owned by `postgres`, so its read of `workspace_members` bypasses RLS and doesn't recurse. No policy on any table queries `workspace_members` directly; they all go through the helper.
+  - pgTAP checks this: a select on `workspace_members` as a user doesn't raise `42P17` (infinite recursion).
+- `is_member(ws, min_role) → bool`, a scalar wrapper for single-row checks in functions (`accept_invite`, the digest).
+- **Profiles:** members must see co-members' names (assignee pickers, member list). A new select policy: own row, **or** `id in (select public.my_coworkers())`, a definer function returning the user ids that share a workspace with the caller.
 
-`is_member(ws uuid, min_role role)`:
-- `security definer`, `stable`, `set search_path = ''`;
-- reads `workspace_members` for `(select auth.uid())` and compares roles by rank.
+### 4.3 Role matrix → policies
+| Table | select | insert | update | delete |
+|---|---|---|---|---|
+| workspaces | member of any role | anyone, via `create_workspace(name)` (definer; also adds the owner row) | owner | owner + aal2 (3.5); soft delete |
+| workspace_members | members of the same workspace | owner (at 3.3, only via `accept_invite` or `add_member`) | owner (role change; last-owner trigger) | owner + aal2 (3.5), or self (leave; last-owner trigger) |
+| invites | owner | owner | none | owner (revoke) |
+| projects | viewer+ | member+, `owner_id = auth.uid()` | member+ | member+ |
+| tasks | viewer+ | member+, `owner_id = auth.uid()` | member+ | member+ |
+| llm_usage | own rows, plus workspace owners for rows in their workspace, plus app admins | none (log function) | none | none |
 
-Policies on every table call it. The `workspace_members` policies also call it; the definer function bypasses RLS on that table, which removes the recursion.
+- Column grants stay as they are, plus `insert (workspace_id)` on projects and tasks.
+- `workspace_id` isn't updatable: moving a task between workspaces is out of scope.
 
-### Role matrix
+### 4.4 Migration sequence (3.2), three new files, each atomic
+1. **`workspaces_core`:**
+   - enum, tables, RLS enabled, grants and policies;
+   - `role_rank`, `my_workspaces`, `is_member`, `my_coworkers`, `create_workspace`;
+   - the last-owner trigger.
+   - Nothing existing changes yet.
+2. **`workspaces_backfill`:** one transaction, which is the risky one.
+   1. **Snapshot counts** into a temp table: profiles, projects, tasks (and per-owner counts), llm_usage.
+   2. **Insert one "Personal" workspace per profile**, plus its owner membership. The mapping goes through a temp table `(user_id, workspace_id)`.
+   3. **Add `workspace_id` as nullable** to projects, tasks and llm_usage. Backfill it through the mapping from `owner_id` (llm_usage from `user_id`), then set projects and tasks `not null`.
+   4. **Swap the keys:** the unique `(id, workspace_id)`, the composite FK and the name index. The old ones are dropped only after the new ones exist.
+   5. **Drop the `… own` policies on projects and tasks** and create the membership policies. This happens in the same transaction, so there's no window with no policies.
+   6. **`tasks_before_write`:** the series check compares `workspace_id`, not `owner_id`.
+   7. **`complete_task()`:** the next occurrence copies `workspace_id` and `assignee_id`. The outline missed this; without it every recurring completion fails `not null`.
+   8. **`handle_new_user()`** also creates the Personal workspace and owner membership.
+   9. **Self-check:** `DO` blocks raise, aborting the whole migration, if:
+      - any count differs from the snapshot,
+      - any row has a null `workspace_id`,
+      - any project and task pair lands in different workspaces,
+      - any profile has no owner membership.
 
-| | viewer | member | owner |
-|---|---|---|---|
-| read projects, tasks, attachments | ✓ | ✓ | ✓ |
-| create, update or delete tasks and projects | | ✓ | ✓ |
-| manage invites and members | | | ✓ + aal2 to remove members |
-| delete workspace | | | ✓ + aal2 |
-| read `llm_usage` | own rows | own rows | whole workspace |
+      This runs in prod too.
+3. **`llm_usage_workspace`:** the `log_llm_usage` overload gains `p_workspace_id` (checked with `is_member`), and the owner-reads-workspace-usage policy is added.
 
-`aal2` is enforced in the policy with `(select auth.jwt()->>'aal') = 'aal2'`.
+**Rollback:**
+- **Before merge:** `supabase db reset` locally.
+- **In prod:**
+  - take a snapshot or backup before `db push` (a step in docs/deploy.md);
+  - if it goes wrong after deploy, a **forward-fix** migration restores the `… own` policies. That works because `owner_id` was kept and never changed. Workspace tables can then be left in place, unused.
+  - That revert migration is written and tested locally at 3.2 but **not committed** unless needed. Its SQL goes in docs/deploy.md.
 
-### Migration sequence (to be proven at 3.2 with pgTAP row counts)
+**Rehearsal (3.2):**
+- a seed script (`supabase/seed/phase3-rehearsal.sql`, local only): 2 users, 3 projects each, recurring and one-off tasks, completed series, llm_usage rows;
+- `supabase db reset --version <before>` → seed → `migration up`;
+- pgTAP 010–012 then prove the counts, ownership and the role matrix.
 
-1. Create `workspaces`, `workspace_members`, `invites` and `digest_runs` with RLS and `is_member()`.
-2. Backfill one "Personal" workspace per existing profile, with that user as owner.
-3. Add `workspace_id` as nullable to `projects`, `tasks`, `attachments` and `llm_usage`; backfill it from `owner_id` → the Personal workspace; then set it `not null`.
-4. Replace the owner policies with membership policies, in the same migration as step 3's `not null`, so there's no window with neither.
-5. Update `handle_new_user()` to also create a Personal workspace for new sign-ups.
-6. Move Storage paths to `{workspace_id}/...`: copy the objects, then update the rows. This needs the admin client from an Edge Function or a one-off, and it's a risk to plan at 3.1.
-7. Rollback plan:
-   - Schema: forward-fix migrations only (R7). A down-migration is still written for local testing, so the step can be undone before merge.
-   - Data: take a snapshot before running in prod.
+### 4.5 Code paths that change (3.2)
+- **New:**
+  - `src/lib/workspace/current.ts`: `getCurrentWorkspace(supabase)` reads the `ws` cookie, confirms membership with an RLS select, and falls back to Personal. It returns `{ id, name, role }`.
+  - `setWorkspace` Server Action, which validates membership before setting the cookie.
+- **`(app)/layout.tsx`:** a workspace switcher, and a "view only" badge for viewers.
+- **Projects and tasks:**
+  - Pages filter lists by the current workspace. RLS alone would show the union of all the user's workspaces.
+  - Creates set `workspace_id`.
+  - Updates and deletes by id rely on RLS: `42501` or 0 rows maps to "You can view this workspace but not edit it."
+  - Viewers get read-only UI (hidden forms and row actions).
+  - Detail pages show the row's own workspace.
+- **Capture:** the project list and the saved tasks use the current workspace; viewers can't capture. Attachments are unchanged (D-24).
+- **Ask:**
+  - `ToolContext` gains `workspaceId`, and every tool query adds `.eq("workspace_id", ws)` on top of RLS.
+  - `create_task` proposals carry the workspace, and `confirmCreateTask` re-checks it.
+  - The context text lists the current workspace's projects.
+- **Usage:** extraction logs `workspace_id`. Admin usage is unchanged.
+- **Types:** regenerated. pgTAP 002, 003 and 006 are rewritten for membership, since tests are editable apart from 000.
+- **e2e:** `signInAsNewUser` works unchanged, since a Personal workspace is created. A new `e2e/workspaces.spec.ts` covers the switcher and viewer read-only.
 
-### Other Phase 3 work
+### 4.6 Remaining steps (acceptance lists)
+- **3.3 invites:**
+  - `create_invite` (owner) returns the token once, and the link is shared (D-18).
+  - `accept_invite(token)` (definer) checks: hash match, not expired, not accepted, and email equal to `auth.jwt()->>'email'` (D-16).
+  - Two-user e2e; expired and reused tokens are rejected.
+- **3.4 Realtime:** Broadcast from DB triggers on `workspace:<id>` private channels, with RLS on `realtime.messages` via `my_workspaces()` (R-12). The Playwright cases stay as in the outline below.
+- **3.5 MFA:** as in the outline below. The aal2 check goes in the delete policies from the table in 4.3.
+- **3.6 digest:**
+  - As in the outline below; the email provider is asked first.
+  - Per-workspace digest uses `is_member` and `workspace_id` filters with the admin client in the Edge Function (ADR-0003).
+  - Adds Ask injection cases for other members' titles and project names (R-26).
+- **3.7 to 3.12:** as in the outline below. At 3.7, the numbers for `my_workspaces()` initplans vs per-row `is_member()` are the first measurement.
+
+#### Outline for 3.3–3.12 (kept from the original plan; the notes above refine it)
 
 | Step | Must be true |
 |---|---|
@@ -712,6 +779,9 @@ On 2026-09-29 the owner accepted every recommendation, and chose to cut the 1.6 
 | D-20 | Due-date format from extraction | Local `due_date` + optional `due_time`, converted by `src/lib/time` (not ISO with offset, which models get wrong across DST) | Accepted (2026-09-30) |
 | D-21 | Retention of uploaded files | Delete when the review is saved or discarded; Phase 3 cron removes leftovers; only `source_quote` stays | Accepted (2026-09-30) |
 | D-22 | Uploads over Vercel's 4.5 MB request body limit (R-22) | Option A (proposed ADR 0007: browser uploads to a signed Storage URL) or Option B (a 4 MB limit, no architecture change) | Option B, 4 MB (2026-09-30). ADR 0007 was not adopted; revisit if users hit the limit |
+| D-23 | How the current workspace is chosen | A header switcher stored in a cookie, validated against membership on every request, defaulting to Personal; URLs unchanged | Accepted (2026-09-30) |
+| D-24 | Move attachments to workspace storage folders (outline step 6) | Keep them per-user: they're short-lived review inputs (D-21); saved tasks go into the current workspace | Accepted (2026-09-30); resolves R-16 |
+| D-25 | AI cap per user or per workspace | Per user for now (rolling 24 h); `llm_usage.workspace_id` for reporting; revisit at 3.6 | Accepted (2026-09-30) |
 
 ---
 
@@ -736,7 +806,7 @@ Items marked **(owner)** involve locked files that I can't and won't change.
 | R-13 | ~~Prompt injection through stored task titles~~ | Covered at 2.8 by `evals/ask-injection.eval.ts`, a gate in CI. Malicious titles in tool results caused no writes, no proposals, and no hijacked replies; the model quoted them as data. Re-check at 3.6 when titles come from other members. |
 | R-14 **(owner)** | Parallel requests overshoot the cap. The security review showed one call can cost far more than "a few cents" (a PDF, or 6 Ask rounds). | Per-call cost is now bounded (PDF token budget; aborted calls charged). The real fix, to decide: reserve an estimated cost before each call with a definer function, or allow one in-flight call per user. |
 | R-15 | Anthropic model IDs and prices change. | `models.ts` and `pricing.ts` are the only places they appear; check the docs at 2.3 and 2.4 (rule 8). |
-| R-16 | The Storage path migration in Phase 3 (per-user → per-workspace paths) is not transactional with the table update. | Copy first, flip the rows, and delete old objects only after verification. Plan it in detail at 3.1. |
+| R-16 | ~~Storage path migration to per-workspace paths~~ | Resolved by D-24: attachments stay per-user, so there's no path migration. |
 | R-17 | Library versions have moved on (Next 16 `proxy.ts`, Supabase's new publishable and secret API keys, Zod 4, Tailwind 4). | Verify against current docs at 1.3; record choices in docs/conventions.md. |
 | R-18 | Vercel may buffer streamed Server Action responses; the 2.1 spike ran only locally (dev and `next start`). | Check with the extraction stream on the first preview deploy (3.x). If it buffers, propose an ADR; don't work around it. |
 | R-19 | ~~System prompt below the minimum cacheable length~~ | Measured at 2.6: the extraction prefix is 1,407 tokens (Sonnet 5.5's minimum is 512), with 18 of 19 eval calls reading it. Ask hits the cache as well. Re-check if the model changes (Haiku's minimum is 4,096). |
@@ -747,3 +817,6 @@ Items marked **(owner)** involve locked files that I can't and won't change.
 | R-24 | ~~The 11 MB body limit applies to all actions~~ | Resolved with D-22: the Server Action limit is 4.5 MB (a 4 MB file plus overhead), and the proxy override is gone. |
 | R-25 | A client can forge earlier assistant turns in its own chat history (review #10). The impact stays with that user: tools re-run and writes are proposal-only. | Accepted for Phase 2. Keep history server-side if chat persistence is added. |
 | R-26 | Project names and the display name go into prompts outside the note tag (review #11). This is harmless while each user sees only their own data. | Phase 3 (workspaces): wrap every member-written list in data framing, and add Ask injection cases for other members' titles and project names. |
+| R-27 | The backfill migration (§4.4 step 2) runs in one transaction over all rows in prod. | Fine at current size; time it on the 3.7 seed before deploying. |
+| R-28 | The current-workspace cookie is set by the client. | It's only a preference: RLS authorizes every read and write, and `getCurrentWorkspace` ignores a workspace the user isn't a member of. Add a test at 3.2. |
+| R-29 | Co-members can read each other's `display_name`. | Mention it in the privacy notes at 3.10. |
