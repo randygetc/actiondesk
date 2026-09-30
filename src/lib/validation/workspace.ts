@@ -34,3 +34,12 @@ export const INVITE_ERRORS: Record<string, string> = {
     "This invite is for a different email address. Sign in with the invited account.",
   invite_already_member: "That person is already a member.",
 };
+
+/** A TOTP code: 6 digits (spaces allowed while typing). Blank means "not given". */
+export const totpCodeSchema = z.preprocess(
+  (v) => (typeof v === "string" ? v.replace(/\s/g, "") : v),
+  z.union([
+    z.literal(""),
+    z.string().regex(/^\d{6}$/, "Enter the 6-digit code"),
+  ]),
+);

@@ -1,10 +1,12 @@
 import {
+  DeleteWorkspaceForm,
   InviteForm,
   LeaveForm,
   MemberControls,
   NameForm,
 } from "@/components/workspace/forms";
 import { Button } from "@/components/ui/button";
+import { mfaStatus } from "@/lib/auth/mfa";
 import { requireUser } from "@/lib/auth/user";
 import { currentWorkspace } from "@/lib/workspace/current";
 
@@ -12,6 +14,7 @@ import {
   changeRole,
   createInvite,
   createWorkspace,
+  deleteWorkspace,
   removeMember,
   renameWorkspace,
   revokeInvite,
@@ -28,6 +31,7 @@ export default async function WorkspacePage() {
   const { supabase, user } = await requireUser();
   const { current } = await currentWorkspace(supabase, user.id);
   const isOwner = current.role === "owner";
+  const mfa = isOwner ? await mfaStatus(supabase) : null;
 
   const [{ data: members }, { data: invites }] = await Promise.all([
     supabase
@@ -131,6 +135,19 @@ export default async function WorkspacePage() {
               ))}
             </ul>
           ) : null}
+        </section>
+      ) : null}
+
+      {isOwner && mfa ? (
+        <section className="flex flex-col gap-2" aria-labelledby="danger">
+          <h2 id="danger" className="font-medium">
+            Danger zone
+          </h2>
+          <DeleteWorkspaceForm
+            name={current.name}
+            needsCode={mfa.level !== "aal2" && mfa.factorId !== null}
+            action={deleteWorkspace}
+          />
         </section>
       ) : null}
 

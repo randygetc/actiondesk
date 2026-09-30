@@ -251,3 +251,16 @@ Versions: Next 16.3, React 19.2, TypeScript 5.9, Tailwind 4, Zod 4, Vitest 5, @s
 - **Testing:** the security property (members yes, outsiders no) is a db test against the real Realtime
   server (`src/lib/db/realtime.db.test.ts`). In e2e, `context.setOffline()` does **not** drop an open
   WebSocket. Use `context.routeWebSocket` to really disconnect.
+
+## Two-factor (step 3.5, 2026-09-30)
+- **Destructive workspace actions need `aal2`,** enforced in the database: the member-delete policy
+  (removing someone else) and `delete_workspace()`. Leaving yourself doesn't need it.
+- **Step-up in actions:** `stepUp(supabase, code)` from `src/lib/auth/mfa.ts` returns ok if the session
+  is already aal2, verifies the form's code if not, or explains how to set up a factor. Actions return
+  `fieldErrors.code` to make the form show a code field. Only ask for a code if the user has a
+  factor; otherwise a required field blocks the submit and hides the explanation.
+- **MFA calls run in Server Actions** (they change the session), never in the browser.
+- **pgTAP:** `tests.authenticate_as(uid, 'aal2')` for a second-factor session.
+- **e2e:** `e2e/helpers/totp.ts` computes codes (checked against the RFC 6238 test vectors). Enrolling
+  upgrades the current session to aal2, so use `signIn(email, password)` in a new context for an aal1
+  session. Don't reuse a code in the same 30 s window (`freshCode`).

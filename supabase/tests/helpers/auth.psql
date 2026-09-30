@@ -20,7 +20,7 @@ end;
 $$;
 
 -- Act as a signed-in user: role authenticated with that user's JWT claims.
-create function tests.authenticate_as(p_user_id uuid)
+create function tests.authenticate_as(p_user_id uuid, p_aal text default 'aal1')
 returns void
 language plpgsql
 as $$
@@ -32,6 +32,8 @@ begin
     json_build_object(
       'sub', p_user_id,
       'role', 'authenticated',
+      -- aal2 = signed in with a second factor (step 3.5).
+      'aal', p_aal,
       -- Real sessions carry the email; accept_invite checks it (step 3.3).
       'email', (select email from auth.users where id = p_user_id)
     )::text, true);

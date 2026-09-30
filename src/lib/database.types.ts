@@ -473,6 +473,10 @@ export type Database = {
         Returns: string;
       };
       create_workspace: { Args: { p_name: string }; Returns: string };
+      delete_workspace: {
+        Args: { p_workspace_id: string };
+        Returns: undefined;
+      };
       invite_preview: {
         Args: { p_token: string };
         Returns: {
