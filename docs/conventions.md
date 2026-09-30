@@ -102,3 +102,12 @@ Versions: Next 16.3, React 19.2, TypeScript 5.9, Tailwind 4, Zod 4, Vitest 5, @s
   `edit`, and a successful save redirects.
 - **DB tests** (`*.db.test.ts`) run in the Vitest `db` project against local Supabase:
   `npm run test:db`. Unit tests (`npm test`) exclude them.
+
+## CI (step 1.9, 2026-09-30)
+- **Two workflows.** `guardrails.yml` is locked (owner's). `ci.yml` is ours: install → lint →
+  typecheck → unit → `supabase start` → pgTAP → `test:db` → build → e2e. It needs no secrets.
+- **CI writes `.env.local`** from `supabase status -o env` (`API_URL`, `PUBLISHABLE_KEY`), so the
+  dev server, db tests and Playwright read the same file as locally.
+- **Google placeholders.** `config.toml` enables Google with `env(...)` values; CI sets them to
+  `ci-unused` so auth starts. e2e never uses Google (D-8).
+- **Pinned Supabase CLI** in `ci.yml` (2.118.0). Bump it on purpose, with a green run.

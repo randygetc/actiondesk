@@ -1,0 +1,83 @@
+# Build and test. Separate from the locked guardrails workflow (plan step 1.9).
+# Needs no secrets: everything runs against a local Supabase stack.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # config.toml enables Google sign-in, which CI never uses (D-8).
+      # Placeholders only, so the auth service starts.
+      SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID: ci-unused
+      SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET: ci-unused
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.118.0
+
+      - name: Start Supabase
+        run: supabase start -x studio,imgproxy,vector,logflare
+
+      - name: Write .env.local from local Supabase
+        run: |
+          supabase status -o env > "$RUNNER_TEMP/supabase.env"
+          {
+            grep '^API_URL=' "$RUNNER_TEMP/supabase.env" | sed 's/^API_URL=/NEXT_PUBLIC_SUPABASE_URL=/'
+            grep '^PUBLISHABLE_KEY=' "$RUNNER_TEMP/supabase.env" | sed 's/^PUBLISHABLE_KEY=/NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=/'
+          } > .env.local
+          test "$(wc -l < .env.local)" -eq 2
+
+      - name: Database tests (pgTAP)
+        run: supabase test db
+
+      - name: Database tests (Vitest)
+        run: npm run test:db
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E tests
+        run: npm run test:e2e
+
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: test-results/
+          retention-days: 7
