@@ -25,7 +25,7 @@ test("a user over the daily cap gets the limit message, in Capture and Ask", asy
   await page.getByLabel("Notes").fill("- Send the deck");
   await page.getByRole("button", { name: "Find tasks" }).click();
   await expect(
-    page.getByRole("alert").filter({ hasText: "today's AI limit" }),
+    page.getByRole("alert").filter({ hasText: "AI limit" }),
   ).toBeVisible();
 
   await page.getByRole("button", { name: "Ask", exact: true }).click();
@@ -33,7 +33,7 @@ test("a user over the daily cap gets the limit message, in Capture and Ask", asy
   await panel.getByLabel("Question").fill("What's overdue?");
   await panel.getByRole("button", { name: "Send" }).click();
   await expect(panel.getByRole("alert")).toHaveText(
-    "You've reached today's AI limit. It resets at midnight.",
+    "You've reached your AI limit for the last 24 hours. Try again later.",
   );
 });
 

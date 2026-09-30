@@ -10,6 +10,7 @@ import {
 
 import type {
   LlmClient,
+  LlmUsage,
   LlmMessage,
   LlmMessageParam,
   LlmRequest,
@@ -33,6 +34,21 @@ export type ExtractInput = {
 export type ExtractEvent =
   | { type: "task"; task: ExtractedTask }
   | { type: "done"; invalid: number; stopReason: string | null };
+
+/**
+ * Most input tokens one extraction may send (review #4). Text notes are
+ * already capped at 50,000 characters (~13k tokens); PDFs are counted with the
+ * free count_tokens endpoint before the call. 40k tokens is roughly 15–20
+ * pages and about $0.08 of input on Sonnet 5.5.
+ */
+export const MAX_INPUT_TOKENS = 40_000;
+
+export class NoteTooLargeError extends Error {
+  constructor(readonly tokens: number) {
+    super("note too large");
+    this.name = "NoteTooLargeError";
+  }
+}
 
 export const ADD_TASK_TOOL: LlmTool = {
   name: "add_task",
@@ -116,6 +132,8 @@ function firstMessage(input: ExtractInput): LlmMessageParam {
             media_type: "application/pdf",
             data: input.note.base64,
           },
+          // A retry turn resends the document; read it from cache (review #4).
+          cache_control: { type: "ephemeral" },
         },
         {
           type: "text",
@@ -170,6 +188,8 @@ export async function* extractTasks(
   input: ExtractInput,
   opts: {
     onMessage?: (m: LlmMessage) => void;
+    /** Usage of the call in flight, for charging aborted calls. */
+    onUsage?: (u: LlmUsage) => void;
     signal?: AbortSignal;
     config?: ModelConfig;
   } = {},
@@ -181,6 +201,12 @@ export async function* extractTasks(
   let invalid = 0;
   let stopReason: string | null = null;
 
+  // PDFs have no character limit, so bound their cost before sending.
+  if (input.note.kind === "pdf" && client.countTokens) {
+    const tokens = await client.countTokens(request(config, messages));
+    if (tokens > MAX_INPUT_TOKENS) throw new NoteTooLargeError(tokens);
+  }
+
   // Turn 1, plus at most one retry turn for invalid calls.
   for (let turn = 0; turn < 2; turn++) {
     const results: { id: string; error: string | null }[] = [];
@@ -190,6 +216,10 @@ export async function* extractTasks(
       request(config, messages),
       opts.signal,
     )) {
+      if (item.type === "usage") {
+        opts.onUsage?.(item.usage);
+        continue;
+      }
       if (item.type === "message") {
         final = item.message;
         opts.onMessage?.(item.message);

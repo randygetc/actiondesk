@@ -115,8 +115,10 @@ Versions: Next 16.3, React 19.2, TypeScript 5.9, Tailwind 4, Zod 4, Vitest 5, @s
 ## Streaming (step 2.1 spike, 2026-09-30)
 - **Stream from Server Actions** (R5): the action calls `getUser()`, validates with Zod, then returns an
   async generator. The client reads it with `for await`. A `ReadableStream` works too; prefer the generator.
-- **Put the cleanup in `finally`.** When the user navigates away, the generator stops and `finally` runs,
-  but code after the loop doesn't. Usage logging and cancelling the Anthropic request both go there.
+- **Don't rely on `finally` alone** (corrected at 2.8). When the client disconnects, React may never
+  close the generator, so `finally` doesn't run. Streaming LLM actions create a `usageRun()` in the
+  action before returning the generator. Its `after()` callback records usage and cancels the API
+  call if the generator didn't.
 - A second Server Action isn't blocked while a stream runs (checked in dev and `next start`, not on Vercel yet: R-18).
 
 ## Evals (step 2.2, 2026-09-30)
@@ -172,8 +174,10 @@ Versions: Next 16.3, React 19.2, TypeScript 5.9, Tailwind 4, Zod 4, Vitest 5, @s
 ## Cost controls (step 2.6, 2026-09-30)
 - **Every streaming LLM action checks `capReached()` first**, before any API call. When the cap is
   reached it yields `CAP_MESSAGE` and logs a `capped` usage row. The check fails closed.
-- **Cap:** `LLM_DAILY_CAP_USD` per user per local day ($1 if unset). Parallel requests may overshoot
-  by one call each (R-14, accepted).
+- **Cap:** `LLM_DAILY_CAP_USD` per user per **rolling 24 hours** ($1 if unset). No user setting
+  affects the window (time zones used to reset it, review #2). Parallel overshoot is R-14.
+- **Bound every call's input:** text notes are capped at 50,000 characters; PDFs are counted with
+  `count_tokens` against `MAX_INPUT_TOKENS` before the call.
 - **Prompt caching:** `system` is an array whose one text block carries
   `cache_control: { type: "ephemeral" }`. The API renders tools, then system, so that caches both.
   Keep per-request text out of the system prompt, or every call writes a new entry. Check
@@ -199,3 +203,12 @@ Versions: Next 16.3, React 19.2, TypeScript 5.9, Tailwind 4, Zod 4, Vitest 5, @s
   11 MB, because the proxy truncates bodies at 10 MB by default. Vercel's 4.5 MB limit is R-22.
 - **Eval inputs:** `input.txt` is pasted text; `input.pdf|docx|vtt|srt` go through `fileToNote`,
   the same as an upload. `EVAL_ONLY=<text>` runs a subset.
+
+## Injection evals (step 2.8, 2026-09-30)
+- **Extraction injection** is scored inside the extraction eval (`injection-*`, `attachment-hidden-text-pdf`).
+- **Ask injection** is `evals/ask-injection.eval.ts` with cases in `evals/ask/cases.json`. It's a
+  **gate**: any write, unexpected proposal, or forbidden phrase in the model's own words fails CI.
+  Tool reads come from `test/fake-supabase.ts`, so recordings replay without a database. Keep a
+  control case that should propose, so the gate can't pass trivially.
+- When a forbidden-phrase check fails, read the answer before blaming the model. Quoting a
+  malicious title is correct behavior.

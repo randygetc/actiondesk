@@ -53,7 +53,7 @@ describe("fileToNote", () => {
     ]);
     expect(await fileToNote(fake)).toEqual({
       ok: false,
-      error: "Couldn't read that Word document.",
+      error: "That file isn't a readable Word document.",
     });
   });
 });

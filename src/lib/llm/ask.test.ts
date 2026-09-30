@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { fakeSupabase } from "../../../test/fake-supabase";
+
 import { ask, MAX_ROUNDS, type AskContext, type AskEvent } from "./ask";
 import type {
   LlmClient,
@@ -7,29 +9,6 @@ import type {
   LlmMessage,
   LlmRequest,
 } from "./client";
-
-/**
- * A chainable stand-in for the Supabase client: every query resolves to
- * `rows`, and any write method is recorded so tests can prove none happen.
- */
-function fakeSupabase(rows: unknown[] = []) {
-  const writes: string[] = [];
-  const query: unknown = new Proxy(() => {}, {
-    get(_, prop) {
-      if (prop === "then")
-        return (resolve: (v: unknown) => void) =>
-          resolve({ data: rows, error: null });
-      if (prop === "maybeSingle" || prop === "single")
-        return async () => ({ data: null, error: null });
-      if (
-        ["insert", "update", "upsert", "delete", "rpc"].includes(String(prop))
-      )
-        writes.push(String(prop));
-      return () => query;
-    },
-  });
-  return { client: { from: () => query, rpc: () => query } as never, writes };
-}
 
 function context(rows: unknown[] = []) {
   const db = fakeSupabase(rows);

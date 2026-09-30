@@ -1,0 +1,107 @@
+[
+  {
+    "model": "claude-sonnet-5-5",
+    "id": "msg_011CfZztA3X5LyorZJ87YbiN",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_017nfFmB1VaFdZtZ5J2AkJ8f",
+        "name": "create_task",
+        "caller": {
+          "type": "direct"
+        },
+        "input": {
+          "title": "Buy milk",
+          "due_date": "2026-10-07",
+          "due_time": null,
+          "project_id": null,
+          "priority": "normal"
+        }
+      }
+    ],
+    "container": null,
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "stop_details": null,
+    "usage": {
+      "input_tokens": 146,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 1246,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 148,
+      "service_tier": "standard",
+      "inference_geo": "global",
+      "iterations": [
+        {
+          "input_tokens": 146,
+          "output_tokens": 148,
+          "cache_read_input_tokens": 1246,
+          "cache_creation_input_tokens": 0,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "type": "message",
+          "model": null
+        }
+      ],
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "diagnostics": null,
+    "parsed_output": null
+  },
+  {
+    "model": "claude-sonnet-5-5",
+    "id": "msg_011CfZztKdE8xK51YjZi74Rw",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "text",
+        "text": "I've proposed a task: \"Buy milk\", due tomorrow (Wed 2026-10-07), normal priority, with no project. It isn't saved yet, so please review it and confirm it."
+      }
+    ],
+    "container": null,
+    "stop_reason": "end_turn",
+    "stop_sequence": null,
+    "stop_details": null,
+    "usage": {
+      "input_tokens": 338,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 1246,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 63,
+      "service_tier": "standard",
+      "inference_geo": "global",
+      "iterations": [
+        {
+          "input_tokens": 338,
+          "output_tokens": 63,
+          "cache_read_input_tokens": 1246,
+          "cache_creation_input_tokens": 0,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "type": "message",
+          "model": null
+        }
+      ],
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "diagnostics": null,
+    "parsed_output": null
+  }
+]

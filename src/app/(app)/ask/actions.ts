@@ -8,12 +8,8 @@ import { ask, type AskEvent } from "@/lib/llm/ask";
 import { isAbort, isApiError } from "@/lib/llm/client";
 import { ASK_MODEL } from "@/lib/llm/models";
 import { ASK_PROMPT_VERSION } from "@/lib/llm/prompts/ask";
-import {
-  CAP_MESSAGE,
-  capReached,
-  recordUsage,
-  usageMeter,
-} from "@/lib/llm/usage";
+import { CAP_MESSAGE, capReached } from "@/lib/llm/usage";
+import { usageRun, type UsageRun } from "@/lib/llm/usage-run";
 import { log } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import { toUtc } from "@/lib/time/zones";
@@ -74,7 +70,17 @@ export async function askStream(
 
   const ctx = await getContext();
   if (!ctx.user) return once({ type: "error", message: "You are signed out." });
-  return run(ctx, parsed.data);
+  return run(
+    ctx,
+    parsed.data,
+    usageRun({
+      supabase: ctx.supabase,
+      userId: ctx.user.id,
+      feature: "ask",
+      model: ASK_MODEL.model,
+      promptVersion: ASK_PROMPT_VERSION,
+    }),
+  );
 }
 
 async function* run(
@@ -83,16 +89,19 @@ async function* run(
     history: { role: "user" | "assistant"; text: string }[];
     question: string;
   },
+  usage: UsageRun,
 ): AsyncGenerator<AskStreamEvent> {
-  const meter = usageMeter(ASK_MODEL.model);
-  const abort = new AbortController();
-  let outcome: "ok" | "error" | "aborted" | "capped" = "aborted";
+  let outcome: Parameters<UsageRun["setOutcome"]>[0] = "aborted";
+  const set = (o: typeof outcome) => {
+    outcome = o;
+    usage.setOutcome(o);
+  };
   let toolCalls = 0;
 
   try {
     // Daily cap (2.6), checked before any API call.
-    if (await capReached(ctx.supabase, ctx.tz)) {
-      outcome = "capped";
+    if (await capReached(ctx.supabase)) {
+      set("capped");
       yield { type: "error", message: CAP_MESSAGE };
       return;
     }
@@ -107,25 +116,27 @@ async function* run(
       },
       input,
       {
-        onMessage: meter.add,
-        signal: abort.signal,
+        onMessage: usage.meter.add,
+        onUsage: usage.meter.partial,
+        signal: usage.signal,
         onToolError: (tool, e) =>
           log.error("ask.tool_failed", {
             userId: ctx.user.id,
             tool,
-            kind: e instanceof Error ? e.message : "unknown",
+            // Name only: a message could carry data (rule 12, review #8).
+            kind: e instanceof Error ? e.name : "unknown",
           }),
       },
     )) {
       if (e.type === "tool_call") toolCalls++;
-      if (e.type === "done") outcome = "ok";
+      if (e.type === "done") set("ok");
       yield e;
     }
   } catch (e) {
     if (isAbort(e)) {
-      outcome = "aborted";
+      set("aborted");
     } else {
-      outcome = "error";
+      set("error");
       log.error("ask.failed", {
         userId: ctx.user.id,
         status: isApiError(e) ? (e.status ?? null) : null,
@@ -140,14 +151,8 @@ async function* run(
       };
     }
   } finally {
-    abort.abort();
-    await recordUsage(ctx.supabase, {
-      userId: ctx.user.id,
-      feature: "ask",
-      outcome,
-      meter,
-      promptVersion: ASK_PROMPT_VERSION,
-    });
+    // If the client disconnected, after() in usageRun records instead.
+    await usage.finish();
     log.info("ask.answered", { userId: ctx.user.id, toolCalls, outcome });
   }
 }

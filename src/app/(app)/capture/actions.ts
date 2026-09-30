@@ -17,15 +17,12 @@ import { isAbort, isApiError } from "@/lib/llm/client";
 import {
   EXTRACT_PROMPT_VERSION,
   extractTasks,
+  NoteTooLargeError,
   type ExtractInput,
 } from "@/lib/llm/extract";
 import { EXTRACT_MODEL } from "@/lib/llm/models";
-import {
-  CAP_MESSAGE,
-  capReached,
-  recordUsage,
-  usageMeter,
-} from "@/lib/llm/usage";
+import { CAP_MESSAGE, capReached } from "@/lib/llm/usage";
+import { usageRun, type UsageRun } from "@/lib/llm/usage-run";
 import { log } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import { toUtc } from "@/lib/time/zones";
@@ -35,6 +32,7 @@ import {
   extractAttachmentSchema,
   parseReviewedTask,
   saveReviewedSchema,
+  uploadFileSchema,
   type ExtractedTask,
 } from "@/lib/validation/extraction";
 
@@ -101,26 +99,39 @@ export async function extractFromText(input: {
     ctx,
     { kind: "text", text: parsed.data.text },
     parsed.data.includeOthers,
+    extractUsage(ctx),
   );
 }
 
 type Ctx = Exclude<Awaited<ReturnType<typeof getContext>>, { user: null }>;
 
+/** Created in the action, so after() is registered for this request. */
+const extractUsage = (ctx: Ctx) =>
+  usageRun({
+    supabase: ctx.supabase,
+    userId: ctx.user.id,
+    feature: "extract",
+    model: EXTRACT_MODEL.model,
+    promptVersion: EXTRACT_PROMPT_VERSION,
+  });
+
 async function* run(
   ctx: Ctx,
   note: ExtractInput["note"],
   includeOthers: boolean,
+  usage: UsageRun,
 ): AsyncGenerator<CaptureEvent> {
-  const meter = usageMeter(EXTRACT_MODEL.model);
-  const abort = new AbortController();
-  let outcome: "ok" | "invalid_output" | "error" | "aborted" | "capped" =
-    "aborted";
+  let outcome: Parameters<UsageRun["setOutcome"]>[0] = "aborted";
+  const set = (o: typeof outcome) => {
+    outcome = o;
+    usage.setOutcome(o);
+  };
   let count = 0;
 
   try {
     // Daily cap (2.6), checked before any API call.
-    if (await capReached(ctx.supabase, ctx.tz)) {
-      outcome = "capped";
+    if (await capReached(ctx.supabase)) {
+      set("capped");
       yield { type: "error", message: CAP_MESSAGE };
       return;
     }
@@ -134,13 +145,17 @@ async function* run(
         projects: ctx.projects,
         includeOthers,
       },
-      { onMessage: meter.add, signal: abort.signal },
+      {
+        onMessage: usage.meter.add,
+        onUsage: usage.meter.partial,
+        signal: usage.signal,
+      },
     )) {
       if (e.type === "task") {
         count++;
         yield e;
       } else {
-        outcome = e.invalid > 0 ? "invalid_output" : "ok";
+        set(e.invalid > 0 ? "invalid_output" : "ok");
         yield {
           type: "done",
           invalid: e.invalid,
@@ -150,9 +165,20 @@ async function* run(
     }
   } catch (e) {
     if (isAbort(e)) {
-      outcome = "aborted";
+      set("aborted");
+    } else if (e instanceof NoteTooLargeError) {
+      set("error");
+      log.info("capture.note_too_large", {
+        userId: ctx.user.id,
+        tokens: e.tokens,
+      });
+      yield {
+        type: "error",
+        message:
+          "That file is too long to read in one go (about 15 pages at most). Split it and try again.",
+      };
     } else {
-      outcome = "error";
+      set("error");
       log.error("capture.extract_failed", {
         userId: ctx.user.id,
         status: isApiError(e) ? (e.status ?? null) : null,
@@ -167,15 +193,8 @@ async function* run(
       };
     }
   } finally {
-    // Runs when the client disconnects too (spike result d, plan §3.1).
-    abort.abort();
-    await recordUsage(ctx.supabase, {
-      userId: ctx.user.id,
-      feature: "extract",
-      outcome,
-      meter,
-      promptVersion: EXTRACT_PROMPT_VERSION,
-    });
+    // If the client disconnected, after() in usageRun records instead.
+    await usage.finish();
     log.info("capture.extracted", { userId: ctx.user.id, count, outcome });
   }
 }
@@ -255,11 +274,13 @@ export type UploadResult = ActionResult<{ id: string; kind: FileKind }>;
 export async function uploadAttachment(
   formData: FormData,
 ): Promise<UploadResult> {
-  const file = formData.get("file");
-  if (!(file instanceof File))
-    return { ok: false, error: "Choose a file first." };
-  if (file.size > MAX_BYTES)
-    return { ok: false, error: "Files can be at most 10 MB." };
+  const parsed = uploadFileSchema.safeParse(formData.get("file"));
+  if (!parsed.success)
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Choose a file first.",
+    };
+  const file = parsed.data;
 
   const ctx = await getContext();
   if (!ctx.user) return { ok: false, error: "You are signed out." };
@@ -342,7 +363,7 @@ export async function extractFromAttachment(
   const note = await fileToNote(new Uint8Array(await blob.arrayBuffer()));
   if (!note.ok) return once({ type: "error", message: note.error });
 
-  return run(ctx, note.note, parsed.data.includeOthers);
+  return run(ctx, note.note, parsed.data.includeOthers, extractUsage(ctx));
 }
 
 /** Deletes an uploaded file when the review is discarded (D-21). */

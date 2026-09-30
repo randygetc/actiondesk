@@ -2,7 +2,7 @@
 
 Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.md.
 
-- **Last updated:** 2026-09-30 (step 2.7: attachments)
+- **Last updated:** 2026-09-30 (step 2.8: injection hardening)
 - **Sources:** CLAUDE.md, docs/architecture.md, docs/adr/0001–0005, docs/KICKOFF.md, guardrails/, .claude/
 - **Scope:** Phases 1 and 2 are in full detail. Phase 3 is outlined and gets detailed in step 3.1.
 - **Needs your decision:** the owner items in §7 (risks and gaps in the guardrails). All §6 decisions are made.
@@ -27,8 +27,8 @@ Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.
 | 2.4 | Model comparison | done (PR #15): owner chose claude-sonnet-5-5 |
 | 2.5 | Ask ActionDesk | done (PR #16) |
 | 2.6 | Cost controls | done (PR #17) |
-| 2.7 | Attachments | PR open on `phase2/attachments`: PDF/.docx/.txt/.vtt/.srt, type by magic bytes, private bucket, deleted after review; 3 eval cases at 100% incl. hidden-text PDF |
-| 2.8 | Injection hardening | detailed in §3.9; not started |
+| 2.7 | Attachments | done (PR #18) |
+| 2.8 | Injection hardening | PR open on `phase2/injection`: Ask injection eval (gate); security review, 8 findings fixed, 5 deferred (§7) |
 | 3.x | Workspaces, jobs, prod | outline only |
 
 ### 0.1 Phase 1 summary (2026-09-30)
@@ -336,10 +336,11 @@ Server Actions can stream, so R5 holds and no ADR is needed. The spike (throwawa
 | b. Auth during the stream | `getUser()` works before the first event. A write *after* the last event runs as the user: `owner_id default auth.uid()` resolved and RLS passed. |
 | c. Blocking | No. A second action during a 9 s stream returned in ~100 ms. |
 | d. Abort | Navigating away stops the generator and runs its `finally`. Code after the loop does **not** run. The server logs `The destination stream closed early` (harmless, but filter it in Sentry at 3.x). |
+| d, corrected at 2.8 | **Not reliable.** With a real API stream, React stops reading but doesn't close the generator, so `finally` never ran and the aborted call wasn't logged at all (found by the security review plus a live check). Usage is now recorded by `usageRun()`, which uses Next's `after()` and runs once the response ends, whichever way it ends. |
 
 What follows from this:
 - **Pattern:** the action authenticates, validates input, then `return`s an async generator. The client reads it with `for await`.
-- **Usage logging goes in `finally`**, never after the loop, so aborted calls are still logged. On abort, the Anthropic request is cancelled with an `AbortSignal`.
+- **Usage logging goes through `usageRun()`** (2.8): the generator's `finally` records it, and an `after()` callback records it if the client disconnected and `finally` never ran. Either path cancels the Anthropic request.
 - **Not tested locally:** buffering on Vercel. Check it on the first preview deploy (3.x) with the extraction stream. If Vercel buffers, that's an ADR, not a workaround.
 
 ### 3.2 Data model
@@ -677,8 +678,8 @@ Items marked **(owner)** involve locked files that I can't and won't change.
 | R-10 | `complete_task` race conditions and double submits. | `unique (series_id, due_at)` plus an idempotent function, with a test that runs it twice concurrently. |
 | R-11 | `supabase/config.toml` has `additional_redirect_urls = ["https://127.0.0.1:3000"]` (https, no path), and Google isn't configured. | Fix both in 1.5; the redirect must allow `http://127.0.0.1:3000/auth/callback`. |
 | R-12 | Realtime `postgres_changes` checks RLS per subscriber per change (slow at scale), and DELETE events aren't RLS-filtered in the same way. | Use Broadcast with private channels and RLS on `realtime.messages`, or soft deletes. Decide at 3.1. |
-| R-13 | Prompt injection through stored task titles: a malicious title created by one member is later read by Ask or the digest for another member. | Treat all DB text as untrusted in prompts. Write tools stay proposal-only. Add an eval or test case at 2.8 and 3.6. |
-| R-14 | ~~Cap bypass by parallel requests~~ | Decided at 2.6: accept an overshoot of at most one call per parallel request (a few cents). The cap check fails closed. |
+| R-13 | ~~Prompt injection through stored task titles~~ | Covered at 2.8 by `evals/ask-injection.eval.ts`, a gate in CI. Malicious titles in tool results caused no writes, no proposals, and no hijacked replies; the model quoted them as data. Re-check at 3.6 when titles come from other members. |
+| R-14 **(owner)** | Parallel requests overshoot the cap. The security review showed one call can cost far more than "a few cents" (a PDF, or 6 Ask rounds). | Per-call cost is now bounded (PDF token budget; aborted calls charged). The real fix, to decide: reserve an estimated cost before each call with a definer function, or allow one in-flight call per user. |
 | R-15 | Anthropic model IDs and prices change. | `models.ts` and `pricing.ts` are the only places they appear; check the docs at 2.3 and 2.4 (rule 8). |
 | R-16 | The Storage path migration in Phase 3 (per-user → per-workspace paths) is not transactional with the table update. | Copy first, flip the rows, and delete old objects only after verification. Plan it in detail at 3.1. |
 | R-17 | Library versions have moved on (Next 16 `proxy.ts`, Supabase's new publishable and secret API keys, Zod 4, Tailwind 4). | Verify against current docs at 1.3; record choices in docs/conventions.md. |
@@ -687,3 +688,7 @@ Items marked **(owner)** involve locked files that I can't and won't change.
 | R-20 | An attachment is orphaned if the review tab is closed before save or discard (D-21). | Phase 3 cron deletes attachments older than 24 h; until then, a documented cleanup query. |
 | R-21 | `LLM_FAKE` (e2e fake model) must never be active in production. | Honored only when `NODE_ENV !== 'production'`, with a unit test; not set in Vercel. |
 | R-22 | Vercel caps a function's request body at 4.5 MB, so uploads between 4.5 and 10 MB fail in production. They work locally and in `next start`. | Before deploying (3.x): propose an ADR for browser uploads to a signed Storage URL created by a Server Action. That's a browser-side write, which ADR-0004 doesn't allow today. Or lower the limit to 4 MB. Until then the UI says so if an upload fails. |
+| R-23 **(owner)** | Users can write fake usage rows for themselves with `log_llm_usage` (review #6). They can't lower their cap, but they can add noise to the admin report. The report is now aggregated in SQL, so it can't be truncated. | Move usage writes off the user's session to a server-only path. That uses the admin client, so it needs an ADR (R3). |
+| R-24 | The 11 MB body limit applies to every Server Action and proxied request, not only uploads (review #9). | Goes away with the R-22 decision (signed-URL uploads, or a 4 MB limit). |
+| R-25 | A client can forge earlier assistant turns in its own chat history (review #10). The impact stays with that user: tools re-run and writes are proposal-only. | Accepted for Phase 2. Keep history server-side if chat persistence is added. |
+| R-26 | Project names and the display name go into prompts outside the note tag (review #11). This is harmless while each user sees only their own data. | Phase 3 (workspaces): wrap every member-written list in data framing, and add Ask injection cases for other members' titles and project names. |
