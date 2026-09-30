@@ -1,0 +1,3 @@
+Mark: we'll do the Q4 Launch retro in two weeks.
+Mark: Randy, please prepare the metrics deck for the retro.
+Mark: Also Randy, renew the SSL cert for the website within 3 days.

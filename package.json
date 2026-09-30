@@ -10,7 +10,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run --project unit",
     "test:e2e": "playwright test",
-    "eval": "vitest run --project eval --passWithNoTests",
+    "eval": "vitest run --project eval --silent=false",
     "depcruise": "depcruise --config guardrails/dependency-cruiser.cjs src",
     "db:types": "supabase gen types typescript --local > src/lib/database.types.ts && prettier --write src/lib/database.types.ts",
     "test:db": "vitest run --project db"

@@ -1,0 +1,30 @@
+[
+  {
+    "title": "Update the roadmap slides",
+    "assignee": "Ana",
+    "due_date": "2026-10-08",
+    "due_time": null,
+    "project_id": null
+  },
+  {
+    "title": "Write the release notes",
+    "assignee": "me",
+    "due_date": "2026-10-08",
+    "due_time": null,
+    "project_id": null
+  },
+  {
+    "title": "QA the mobile build",
+    "assignee": "Carlo",
+    "due_date": "2026-10-07",
+    "due_time": null,
+    "project_id": null
+  },
+  {
+    "title": "Pick a date for the beta webinar",
+    "assignee": "me",
+    "due_date": null,
+    "due_time": null,
+    "project_id": null
+  }
+]

@@ -1,0 +1,4 @@
+Randy — a few things:
+(1) fix the typo in the site footer
+(2) schedule interviews for the two backend candidates
+(3) order new chairs for the office

@@ -21,8 +21,9 @@ Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.
 | 1.8 | Timezone edge cases | done (PR #9); found spring-forward drift, fixed by storing the local time in the rule (owner decision) |
 | 1.9 | CI | done (PR #10); `ci` is a required check on `main` |
 | P1 | Phase 1 checkpoint | done; summary in §0.1. Owner: friction debrief in docs/learnings.md |
-| 2.1 | Phase 2 plan + streaming spike | PR open on `phase2/plan`; spike passed (§3.1), no ADR; D-19–D-21 decided |
-| 2.2–2.8 | LLM features | detailed in §3.9; not started |
+| 2.1 | Phase 2 plan + streaming spike | done (PR #12); spike passed (§3.1), no ADR; D-19–D-21 decided |
+| 2.2 | Evals first | PR open on `phase2/evals`: 19 cases **drafted by Claude at the owner's request** (KICKOFF has the owner write them; owner reviews `expected.json`); runner, scorer and CI step done. Scores start at 2.3 |
+| 2.3–2.8 | LLM features | detailed in §3.9; not started |
 | 3.x | Workspaces, jobs, prod | outline only |
 
 ### 0.1 Phase 1 summary (2026-09-30)
@@ -463,11 +464,11 @@ Every file imports `server-only`. `client.ts` is the only SDK import (R2).
 ### 3.7 Evals (2.2)
 
 - **Cases:** `evals/extraction/<case>/`, 15–20 of them, written by the owner (KICKOFF 2.2), plus 3 attachment cases at 2.7. Each case has:
-  - `case.json`: `{now, timezone, projects: [{id, name}], includeOthers}`;
+  - `case.json`: `{now, timezone, userName, projects: [{id, name}], includeOthers}` (`userName` from `profiles.display_name`, so the model knows which tasks are the user's);
   - `input.txt` (or `input.pdf`);
-  - `expected.json`: `[{title, assignee, due_at (UTC ISO) | null, project_id | null}]`;
+  - `expected.json`: `[{title, assignee, due_date | null, due_time | null, project_id | null}]`, in local time like the model (D-20; changed at 2.2 so cases are written without UTC arithmetic);
   - `recorded.json`: the raw API responses from the last live run.
-- **Runner:** `evals/extraction.eval.ts` in the existing Vitest `eval` project (R-6).
+- **Runner:** `evals/extraction.eval.ts` in the existing Vitest `eval` project (R-6). Loader, scorer and report live in `evals/lib/`, tested in the unit project. It takes an `Extractor` function; until 2.3 every case shows "no recording".
   - **Recorded mode (default):** replays `recorded.json` through the real `extract.ts` via a fake `LlmClient`. Deterministic, with no key.
   - **Live mode** (`EVAL_LIVE=1 npm run eval`): calls the API, rewrites `recorded.json`, and logs usage.
 - **Matching:** greedy one-to-one pairing of extracted to expected tasks by title similarity (normalized token overlap ≥ 0.5).
@@ -478,7 +479,7 @@ Every file imports `server-only`. `client.ts` is the only SDK import (R2).
   - project (exact);
   - precision and recall.
   - A case expecting no tasks scores 1 only if nothing is extracted.
-- **Output:** a per-case table plus an overall score (the mean F1 of the fields). Scores go into `docs/learnings.md` per iteration.
+- **Output:** a per-case table plus an overall score. Each field (title, assignee, due, project) gets an F1, where a field counts as correct only on a matched pair. A case's score is the mean of its four F1s, and the overall score is the mean over cases. An extractor error scores 0. Scores go into `docs/learnings.md` per iteration.
 - **CI:** `ci.yml` gains an `npm run eval` step (recorded mode) at 2.2.
 
 ### 3.8 Where LLM output crosses a trust boundary

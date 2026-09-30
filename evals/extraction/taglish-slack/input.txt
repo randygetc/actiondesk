@@ -1,0 +1,3 @@
+[9:02] Ana: @Randy pa-review naman ng PR ko sa checkout page, need ko ma-merge before 5pm today
+[9:05] Randy: sige, titingnan ko after lunch
+[9:06] Ana: salamat! tsaka paki-update yung Hiring tracker pag may time ka

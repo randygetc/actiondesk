@@ -118,3 +118,13 @@ Versions: Next 16.3, React 19.2, TypeScript 5.9, Tailwind 4, Zod 4, Vitest 5, @s
 - **Put the cleanup in `finally`.** When the user navigates away, the generator stops and `finally` runs,
   but code after the loop doesn't. Usage logging and cancelling the Anthropic request both go there.
 - A second Server Action isn't blocked while a stream runs (checked in dev and `next start`, not on Vercel yet: R-18).
+
+## Evals (step 2.2, 2026-09-30)
+- **Layout:** cases in `evals/extraction/<case>/` (format in `evals/README.md`). The shared code is in
+  `evals/lib/`, never inside a cases folder, because every folder there is loaded as a case.
+  Suites are `evals/*.eval.ts` (`npm run eval`); library tests are `evals/**/*.test.ts` in the unit project.
+- **Case files are validated on load** with Zod, and an error names the file and field.
+  The unit tests load every committed case, so a broken case fails `npm test`.
+- **`npm run eval` passes `--silent=false`**, because Vitest hides console output from passing tests.
+- **The score is a metric, not a gate:** the eval fails only when a case can't be loaded or run.
+  If you want a minimum score, set it at 2.4, once real numbers exist.

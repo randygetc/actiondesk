@@ -43,6 +43,9 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      - name: Evals (recorded, no key)
+        run: npm run eval
+
       - uses: supabase/setup-cli@v1
         with:
           version: 2.118.0

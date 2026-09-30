@@ -1,0 +1,5 @@
+Action items from product sync:
+- Ana: update the roadmap slides by Thursday
+- Randy: write the release notes by Thursday
+- Carlo: QA the mobile build tomorrow
+- Randy and Joy: pick a date for the beta webinar
