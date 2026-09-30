@@ -2,7 +2,13 @@ import { CapturePanel } from "@/components/capture/capture-panel";
 import { requireUser } from "@/lib/auth/user";
 import { isFakeLlm } from "@/lib/llm";
 
-import { extractFromText, saveReviewedTasks } from "./actions";
+import {
+  discardAttachment,
+  extractFromAttachment,
+  extractFromText,
+  saveReviewedTasks,
+  uploadAttachment,
+} from "./actions";
 
 export default async function CapturePage() {
   const { supabase } = await requireUser();
@@ -27,6 +33,9 @@ export default async function CapturePage() {
       </div>
       <CapturePanel
         extract={extractFromText}
+        extractFile={extractFromAttachment}
+        upload={uploadAttachment}
+        discard={discardAttachment}
         save={saveReviewedTasks}
         projects={projects ?? []}
       />

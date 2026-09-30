@@ -182,3 +182,20 @@ Versions: Next 16.3, React 19.2, TypeScript 5.9, Tailwind 4, Zod 4, Vitest 5, @s
   `rpc("is_app_admin")`; the data itself is gated by RLS.
 - **Local migrations:** apply new ones with `supabase migration up`. `supabase db reset` wipes local
   data, so use it only when you mean to.
+
+## Attachments (step 2.7, 2026-09-30)
+- **File type comes from the bytes only** (`detectFile` in `src/lib/attachments/detect.ts`), never
+  the name or the browser's MIME type. It's checked again when the stored file is read back.
+- **Path:** `<uid>/<attachment id>.<ext>`, built on the server. The row goes in first, then the upload;
+  if the upload fails, the row is removed.
+- **Delete after review** (D-21): on save or Discard, delete the object first and then the row.
+  Direct SQL deletes on `storage.objects` are blocked by Supabase unless
+  `storage.allow_delete_query` is set. pgTAP sets it to act like the Storage API; app code uses
+  `supabase.storage.remove()`.
+- **Text:** PDFs go to the model as a `document` block; .docx uses `mammoth.extractRawText` (never
+  HTML); .vtt/.srt become `Speaker: text` lines. Text over 50,000 characters is refused, not
+  truncated.
+- **Body limits:** `experimental.serverActions.bodySizeLimit` and `proxyClientMaxBodySize` are both
+  11 MB, because the proxy truncates bodies at 10 MB by default. Vercel's 4.5 MB limit is R-22.
+- **Eval inputs:** `input.txt` is pasted text; `input.pdf|docx|vtt|srt` go through `fileToNote`,
+  the same as an upload. `EVAL_ONLY=<text>` runs a subset.

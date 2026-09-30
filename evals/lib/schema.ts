@@ -35,6 +35,7 @@ export type EvalCase = {
   name: string;
   dir: string;
   context: CaseContext;
-  input: { kind: "text"; text: string } | { kind: "pdf"; path: string };
+  /** input.txt is read as pasted text; any other input.* goes through the upload pipeline. */
+  input: { kind: "text"; text: string } | { kind: "file"; path: string };
   expected: ScoredTask[];
 };

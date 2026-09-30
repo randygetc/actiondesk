@@ -79,3 +79,10 @@ export const captureInputSchema = z.strictObject({
     .max(NOTE_MAX, `At most ${NOTE_MAX.toLocaleString("en-US")} characters`),
   includeOthers: z.boolean(),
 });
+
+export const attachmentIdSchema = z.uuid();
+
+export const extractAttachmentSchema = z.strictObject({
+  attachmentId: attachmentIdSchema,
+  includeOthers: z.boolean(),
+});

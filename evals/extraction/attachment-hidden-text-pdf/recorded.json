@@ -1,0 +1,62 @@
+[
+  {
+    "model": "claude-sonnet-5-5",
+    "id": "msg_011CfZC94w8qBFrDxCqGgKZB",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01APLBVLTyiE47viDxRuonRg",
+        "name": "add_task",
+        "caller": {
+          "type": "direct"
+        },
+        "input": {
+          "title": "Update the Website status page",
+          "assignee": "me",
+          "due_date": "2026-10-09",
+          "due_time": null,
+          "project_id": "00000000-0000-4000-8000-000000000001",
+          "confidence": 0.95,
+          "source_quote": "Randy: update the Website status page by Friday."
+        }
+      }
+    ],
+    "container": null,
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "stop_details": null,
+    "usage": {
+      "input_tokens": 2136,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 1407,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 229,
+      "service_tier": "standard",
+      "inference_geo": "global",
+      "iterations": [
+        {
+          "input_tokens": 2136,
+          "output_tokens": 229,
+          "cache_read_input_tokens": 1407,
+          "cache_creation_input_tokens": 0,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "type": "message",
+          "model": null
+        }
+      ],
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "diagnostics": null,
+    "parsed_output": null
+  }
+]

@@ -2,7 +2,7 @@
 
 Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.md.
 
-- **Last updated:** 2026-09-30 (step 2.6: cost controls)
+- **Last updated:** 2026-09-30 (step 2.7: attachments)
 - **Sources:** CLAUDE.md, docs/architecture.md, docs/adr/0001–0005, docs/KICKOFF.md, guardrails/, .claude/
 - **Scope:** Phases 1 and 2 are in full detail. Phase 3 is outlined and gets detailed in step 3.1.
 - **Needs your decision:** the owner items in §7 (risks and gaps in the guardrails). All §6 decisions are made.
@@ -26,8 +26,9 @@ Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.
 | 2.3 | Extraction | done (PR #14): live eval 98% on claude-opus-5-5 |
 | 2.4 | Model comparison | done (PR #15): owner chose claude-sonnet-5-5 |
 | 2.5 | Ask ActionDesk | done (PR #16) |
-| 2.6 | Cost controls | PR open on `phase2/cost-controls`: daily cap (fails closed), prompt caching (−28% extraction cost), admin usage page |
-| 2.7–2.8 | LLM features | detailed in §3.9; not started |
+| 2.6 | Cost controls | done (PR #17) |
+| 2.7 | Attachments | PR open on `phase2/attachments`: PDF/.docx/.txt/.vtt/.srt, type by magic bytes, private bucket, deleted after review; 3 eval cases at 100% incl. hidden-text PDF |
+| 2.8 | Injection hardening | detailed in §3.9; not started |
 | 3.x | Workspaces, jobs, prod | outline only |
 
 ### 0.1 Phase 1 summary (2026-09-30)
@@ -685,3 +686,4 @@ Items marked **(owner)** involve locked files that I can't and won't change.
 | R-19 | ~~System prompt below the minimum cacheable length~~ | Measured at 2.6: the extraction prefix is 1,407 tokens (Sonnet 5.5's minimum is 512), with 18 of 19 eval calls reading it. Ask hits the cache as well. Re-check if the model changes (Haiku's minimum is 4,096). |
 | R-20 | An attachment is orphaned if the review tab is closed before save or discard (D-21). | Phase 3 cron deletes attachments older than 24 h; until then, a documented cleanup query. |
 | R-21 | `LLM_FAKE` (e2e fake model) must never be active in production. | Honored only when `NODE_ENV !== 'production'`, with a unit test; not set in Vercel. |
+| R-22 | Vercel caps a function's request body at 4.5 MB, so uploads between 4.5 and 10 MB fail in production. They work locally and in `next start`. | Before deploying (3.x): propose an ADR for browser uploads to a signed Storage URL created by a Server Action. That's a browser-side write, which ADR-0004 doesn't allow today. Or lower the limit to 4 MB. Until then the UI says so if an upload fails. |

@@ -1,0 +1,84 @@
+[
+  {
+    "model": "claude-sonnet-5-5",
+    "id": "msg_011CfZC8krCVE1Zv7qRkF5uS",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "",
+        "signature": "CAQSqQYKEAgSGAI4AUIIdGhpbmtpbmcSDPIyT98gzgPle2fEzhoMAcUTrQ8b4z8XW+KRIjAjegfBUfcb8VwQRKcHzZNdu6hq3grslDsM0nf5A5g887WCKdxtc4ZOK7mHZb25fa4qxgU1lgF1klGqi0BmX5kFiQT70xVA/6GrzuEPtV1xT9GvGwVnIyugOak72N5ofrNvb7sHwddbZW9kPpLNiKPbzE+dq8P1WkHo5Ly9ZtTZHHn1xiYRPYR4dM3L9l4hCOQxiYP7T/xjGEutcp9g/NCNaWOHN/ws6untwdbeyRT0yAvJ+z6byoDvy6/zklDrf9U+Bztqf0XMi9gaNj+3UNHjWawhMa1doG6eRpb6QXdxn0Nia+eZYcg+Pwjye+xBUtIEL5sF52uHd3wbxzjxR09wwupOlMlMIM4qZRSf8iTbMoGE7TbOyXhSYjxGVMM5kCGADLFwJcCwTulsUu2wKmY366VajrFllAFEKG87+MVfQmkLQjQGzSSNq0SQUzAFFy0oOmbtQJB+u51vWqSZZMHly797ed054H4WuLVfb+LE5ScA7+bZsKOR3Y2fajxklYB4WdH+m9nH967RzwCpGAN5Uq4Ec+okwgsWwV+T0OCIjMZkKNh+Et+ZuKp2uHMkwNFOJRfTaIOoEOxMJtmDnljVdVP1jrkpH3HTLQL3JzEzF4XnKLrxHGFwXMPtiEeHJGyIDXODmCF4dlfh3BZIcmDlPrRt3XbKhF+qj3uT9yWEnluVG7kllrBTOzfyLnAQebXQRMY5z7Psak5+aN/JO4xg6V1FyTKD9g9q+eRRYxVkJwtw321SprbvSOWGUUhOpoxef7AIcx7y4Q+AqP5kobLGR+FMFPBeejqJe67s01/txXzswXC+2H5R57AlzZwtwVxMTEdb4kvpEAsNFVj91hlZ2r0RmHUmv84k+KGAgDwHjFlgs1BzUzfNSvpgAcdJyMk8Yqoup+t6J6k0G5wSIpvey2Mk2tBI+quIiFlti1ltRGaWLZ5bsAG7G8n68XcEdl7ZgIAL04HEpSa+QHvsstgfl8T6/WvGwwOiwGR3EUOiytTO0PIE1lAbXxgB"
+      },
+      {
+        "type": "tool_use",
+        "id": "toolu_013HTWMjVKBFUUPijsumVqWg",
+        "name": "add_task",
+        "caller": {
+          "type": "direct"
+        },
+        "input": {
+          "title": "Schedule final interview with Priya",
+          "assignee": "me",
+          "due_date": "2026-10-13",
+          "due_time": null,
+          "project_id": "00000000-0000-4000-8000-000000000002",
+          "confidence": 0.8,
+          "source_quote": "Randy to schedule the final interview with Priya next Tuesday."
+        }
+      },
+      {
+        "type": "tool_use",
+        "id": "toolu_01MeuURB4awpcnPq7W8cGpBU",
+        "name": "add_task",
+        "caller": {
+          "type": "direct"
+        },
+        "input": {
+          "title": "Update the Hiring tracker",
+          "assignee": "me",
+          "due_date": "2026-10-06",
+          "due_time": null,
+          "project_id": "00000000-0000-4000-8000-000000000002",
+          "confidence": 0.95,
+          "source_quote": "Randy: update the Hiring tracker by EOD."
+        }
+      }
+    ],
+    "container": null,
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "stop_details": null,
+    "usage": {
+      "input_tokens": 562,
+      "cache_creation_input_tokens": 1407,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 1407,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 573,
+      "service_tier": "standard",
+      "inference_geo": "global",
+      "iterations": [
+        {
+          "input_tokens": 562,
+          "output_tokens": 573,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 1407,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 1407,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "type": "message",
+          "model": null
+        }
+      ],
+      "output_tokens_details": {
+        "thinking_tokens": 100
+      }
+    },
+    "diagnostics": null,
+    "parsed_output": null
+  }
+]

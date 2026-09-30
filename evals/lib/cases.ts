@@ -3,6 +3,8 @@ import { join } from "node:path";
 
 import { caseSchema, expectedSchema, type EvalCase } from "./schema";
 
+const FILE_INPUTS = ["input.pdf", "input.docx", "input.vtt", "input.srt"];
+
 function readJson(path: string): unknown {
   return JSON.parse(readFileSync(path, "utf8"));
 }
@@ -35,13 +37,16 @@ export function loadCase(dir: string, name: string): EvalCase {
       throw new Error(`${where("expected.json")}: unknown project_id`);
 
   const txt = join(dir, "input.txt");
-  const pdf = join(dir, "input.pdf");
+  const file = FILE_INPUTS.map((f) => join(dir, f)).find((f) => existsSync(f));
   const input = existsSync(txt)
     ? { kind: "text" as const, text: readFileSync(txt, "utf8") }
-    : existsSync(pdf)
-      ? { kind: "pdf" as const, path: pdf }
+    : file
+      ? { kind: "file" as const, path: file }
       : null;
-  if (!input) throw new Error(`${name}: needs input.txt or input.pdf`);
+  if (!input)
+    throw new Error(
+      `${name}: needs input.txt or one of ${FILE_INPUTS.join(", ")}`,
+    );
 
   return { name, dir, context: context.data, input, expected: expected.data };
 }
