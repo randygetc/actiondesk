@@ -1,13 +1,13 @@
 [
   {
     "model": "claude-sonnet-5-5",
-    "id": "msg_011CfZ6NReEpTCBQjjkDDuLt",
+    "id": "msg_011CfZ8unKJP5DL3PnTjuS2j",
     "type": "message",
     "role": "assistant",
     "content": [
       {
         "type": "tool_use",
-        "id": "toolu_01BG1qbpLNfmM56mgGT4hrby",
+        "id": "toolu_01AWuQ3ts72W2ptdF8JwdVYw",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -18,13 +18,13 @@
           "due_date": "2026-10-08",
           "due_time": null,
           "project_id": "00000000-0000-4000-8000-000000000003",
-          "confidence": 0.9,
+          "confidence": 0.85,
           "source_quote": "Randy: write the release notes by Thursday"
         }
       },
       {
         "type": "tool_use",
-        "id": "toolu_01EpmisSEzqHfrgZfUyczqFv",
+        "id": "toolu_01HbZKXPvUc14X6afeUwQCud",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -35,7 +35,7 @@
           "due_date": null,
           "due_time": null,
           "project_id": null,
-          "confidence": 0.9,
+          "confidence": 0.85,
           "source_quote": "Randy and Joy: pick a date for the beta webinar"
         }
       }
@@ -45,9 +45,9 @@
     "stop_sequence": null,
     "stop_details": null,
     "usage": {
-      "input_tokens": 1982,
+      "input_tokens": 575,
       "cache_creation_input_tokens": 0,
-      "cache_read_input_tokens": 0,
+      "cache_read_input_tokens": 1407,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
         "ephemeral_1h_input_tokens": 0
@@ -57,9 +57,9 @@
       "inference_geo": "global",
       "iterations": [
         {
-          "input_tokens": 1982,
+          "input_tokens": 575,
           "output_tokens": 441,
-          "cache_read_input_tokens": 0,
+          "cache_read_input_tokens": 1407,
           "cache_creation_input_tokens": 0,
           "cache_creation": {
             "ephemeral_5m_input_tokens": 0,

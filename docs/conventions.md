@@ -168,3 +168,17 @@ Versions: Next 16.3, React 19.2, TypeScript 5.9, Tailwind 4, Zod 4, Vitest 5, @s
 - **Check a new LLM feature live once** through the dev server before opening the PR (about 1 cent).
   Unit tests with a scripted model can't catch API schema rejections; the first live Ask call
   returned a 400 that no test had caught.
+
+## Cost controls (step 2.6, 2026-09-30)
+- **Every streaming LLM action checks `capReached()` first**, before any API call. When the cap is
+  reached it yields `CAP_MESSAGE` and logs a `capped` usage row. The check fails closed.
+- **Cap:** `LLM_DAILY_CAP_USD` per user per local day ($1 if unset). Parallel requests may overshoot
+  by one call each (R-14, accepted).
+- **Prompt caching:** `system` is an array whose one text block carries
+  `cache_control: { type: "ephemeral" }`. The API renders tools, then system, so that caches both.
+  Keep per-request text out of the system prompt, or every call writes a new entry. Check
+  `cached_tokens` in `llm_usage` after any prompt or model change.
+- **Admins** are rows in `app_admins`, added by the owner with SQL. Pages decide admin-only UI with
+  `rpc("is_app_admin")`; the data itself is gated by RLS.
+- **Local migrations:** apply new ones with `supabase migration up`. `supabase db reset` wipes local
+  data, so use it only when you mean to.

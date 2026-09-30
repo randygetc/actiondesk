@@ -1,13 +1,13 @@
 [
   {
     "model": "claude-sonnet-5-5",
-    "id": "msg_011CfZ6LW277LsCfaahenUAw",
+    "id": "msg_011CfZ8spRzUGXN4MJzHZpwm",
     "type": "message",
     "role": "assistant",
     "content": [
       {
         "type": "tool_use",
-        "id": "toolu_01U15LRQzvNmfZw5kH7bDTyq",
+        "id": "toolu_01HSup9MhuqnB8dUgwH5Byyk",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -28,9 +28,9 @@
     "stop_sequence": null,
     "stop_details": null,
     "usage": {
-      "input_tokens": 1975,
+      "input_tokens": 565,
       "cache_creation_input_tokens": 0,
-      "cache_read_input_tokens": 0,
+      "cache_read_input_tokens": 1407,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
         "ephemeral_1h_input_tokens": 0
@@ -40,9 +40,9 @@
       "inference_geo": "global",
       "iterations": [
         {
-          "input_tokens": 1975,
+          "input_tokens": 565,
           "output_tokens": 234,
-          "cache_read_input_tokens": 0,
+          "cache_read_input_tokens": 1407,
           "cache_creation_input_tokens": 0,
           "cache_creation": {
             "ephemeral_5m_input_tokens": 0,

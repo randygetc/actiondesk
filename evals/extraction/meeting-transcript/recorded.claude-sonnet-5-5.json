@@ -1,13 +1,13 @@
 [
   {
     "model": "claude-sonnet-5-5",
-    "id": "msg_011CfZ6MbL7xrnpkf5xoaqzU",
+    "id": "msg_011CfZ8u7yTuUZxarxZv8QES",
     "type": "message",
     "role": "assistant",
     "content": [
       {
         "type": "tool_use",
-        "id": "toolu_01MCj6jwrp2ebqzg8BGZuExR",
+        "id": "toolu_014jWT3AHbWcCsYLhsbSFVhL",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -24,7 +24,7 @@
       },
       {
         "type": "tool_use",
-        "id": "toolu_01W8y4qLJr37ukyNcLoDmA2d",
+        "id": "toolu_01DrY9Tsrt1xGrQeGGh6vTxo",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -35,7 +35,7 @@
           "due_date": "2026-10-06",
           "due_time": null,
           "project_id": "00000000-0000-4000-8000-000000000003",
-          "confidence": 0.93,
+          "confidence": 0.92,
           "source_quote": "Randy, can you also confirm the launch date with marketing today?"
         }
       }
@@ -45,9 +45,9 @@
     "stop_sequence": null,
     "stop_details": null,
     "usage": {
-      "input_tokens": 2090,
+      "input_tokens": 680,
       "cache_creation_input_tokens": 0,
-      "cache_read_input_tokens": 0,
+      "cache_read_input_tokens": 1407,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
         "ephemeral_1h_input_tokens": 0
@@ -57,9 +57,9 @@
       "inference_geo": "global",
       "iterations": [
         {
-          "input_tokens": 2090,
+          "input_tokens": 680,
           "output_tokens": 473,
-          "cache_read_input_tokens": 0,
+          "cache_read_input_tokens": 1407,
           "cache_creation_input_tokens": 0,
           "cache_creation": {
             "ephemeral_5m_input_tokens": 0,

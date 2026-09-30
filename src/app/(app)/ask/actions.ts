@@ -8,7 +8,12 @@ import { ask, type AskEvent } from "@/lib/llm/ask";
 import { isAbort, isApiError } from "@/lib/llm/client";
 import { ASK_MODEL } from "@/lib/llm/models";
 import { ASK_PROMPT_VERSION } from "@/lib/llm/prompts/ask";
-import { recordUsage, usageMeter } from "@/lib/llm/usage";
+import {
+  CAP_MESSAGE,
+  capReached,
+  recordUsage,
+  usageMeter,
+} from "@/lib/llm/usage";
 import { log } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import { toUtc } from "@/lib/time/zones";
@@ -81,10 +86,16 @@ async function* run(
 ): AsyncGenerator<AskStreamEvent> {
   const meter = usageMeter(ASK_MODEL.model);
   const abort = new AbortController();
-  let outcome: "ok" | "error" | "aborted" = "aborted";
+  let outcome: "ok" | "error" | "aborted" | "capped" = "aborted";
   let toolCalls = 0;
 
   try {
+    // Daily cap (2.6), checked before any API call.
+    if (await capReached(ctx.supabase, ctx.tz)) {
+      outcome = "capped";
+      yield { type: "error", message: CAP_MESSAGE };
+      return;
+    }
     for await (const e of ask(
       llmClient(),
       {

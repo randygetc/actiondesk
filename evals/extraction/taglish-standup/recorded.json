@@ -1,13 +1,13 @@
 [
   {
     "model": "claude-sonnet-5-5",
-    "id": "msg_011CfZ6PwjmehRS5v8Vf2ffr",
+    "id": "msg_011CfZ8w4tUF8anxsZcGCKXK",
     "type": "message",
     "role": "assistant",
     "content": [
       {
         "type": "tool_use",
-        "id": "toolu_01QbnGDYTdRaKMaGP6hsL8bd",
+        "id": "toolu_01FpJgQZXh341JxWMLzZScu9",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -24,7 +24,7 @@
       },
       {
         "type": "tool_use",
-        "id": "toolu_01AVGSdxQmfTXQrCz22Wense",
+        "id": "toolu_01DNoxx9oALj6C1E9tJ5W7Ug",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -45,9 +45,9 @@
     "stop_sequence": null,
     "stop_details": null,
     "usage": {
-      "input_tokens": 2012,
+      "input_tokens": 606,
       "cache_creation_input_tokens": 0,
-      "cache_read_input_tokens": 0,
+      "cache_read_input_tokens": 1407,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
         "ephemeral_1h_input_tokens": 0
@@ -57,9 +57,9 @@
       "inference_geo": "global",
       "iterations": [
         {
-          "input_tokens": 2012,
+          "input_tokens": 606,
           "output_tokens": 460,
-          "cache_read_input_tokens": 0,
+          "cache_read_input_tokens": 1407,
           "cache_creation_input_tokens": 0,
           "cache_creation": {
             "ephemeral_5m_input_tokens": 0,

@@ -1,13 +1,13 @@
 [
   {
     "model": "claude-sonnet-5-5",
-    "id": "msg_011CfZ6KmTWw2GqHLUoyP19w",
+    "id": "msg_011CfZ8s8DYLp7fd35ELquNR",
     "type": "message",
     "role": "assistant",
     "content": [
       {
         "type": "tool_use",
-        "id": "toolu_01WrFjXW7scnSBn1nPW7voru",
+        "id": "toolu_01LLbTbKGQK2raWq5gTPuyMc",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -19,18 +19,18 @@
           "due_time": null,
           "project_id": "00000000-0000-4000-8000-000000000001",
           "confidence": 0.95,
-          "source_quote": "Randy to send the homepage copy to design by Oct 9 (Website project)."
+          "source_quote": "Randy to send the homepage copy to design by Oct 9"
         }
       },
       {
         "type": "tool_use",
-        "id": "toolu_012iJ4oKLaiCdv9BaRy3A9pX",
+        "id": "toolu_016SgrWhJonih6uKdEzKVbb7",
         "name": "add_task",
         "caller": {
           "type": "direct"
         },
         "input": {
-          "title": "Book venue for the offsite",
+          "title": "Book the venue for the offsite",
           "assignee": "me",
           "due_date": "2026-10-15",
           "due_time": "17:00",
@@ -41,18 +41,18 @@
       },
       {
         "type": "tool_use",
-        "id": "toolu_01AZRtEhriuoETFy13un3kPy",
+        "id": "toolu_013JLNnHVMaxmgHtxbqSqFGP",
         "name": "add_task",
         "caller": {
           "type": "direct"
         },
         "input": {
-          "title": "Update scorecard template for Hiring",
+          "title": "Update the scorecard template",
           "assignee": "me",
           "due_date": null,
           "due_time": null,
           "project_id": "00000000-0000-4000-8000-000000000002",
-          "confidence": 0.85,
+          "confidence": 0.9,
           "source_quote": "Update the scorecard template for Hiring (me) — no rush."
         }
       }
@@ -62,24 +62,24 @@
     "stop_sequence": null,
     "stop_details": null,
     "usage": {
-      "input_tokens": 1992,
-      "cache_creation_input_tokens": 0,
+      "input_tokens": 585,
+      "cache_creation_input_tokens": 1407,
       "cache_read_input_tokens": 0,
       "cache_creation": {
-        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 1407,
         "ephemeral_1h_input_tokens": 0
       },
-      "output_tokens": 699,
+      "output_tokens": 690,
       "service_tier": "standard",
       "inference_geo": "global",
       "iterations": [
         {
-          "input_tokens": 1992,
-          "output_tokens": 699,
+          "input_tokens": 585,
+          "output_tokens": 690,
           "cache_read_input_tokens": 0,
-          "cache_creation_input_tokens": 0,
+          "cache_creation_input_tokens": 1407,
           "cache_creation": {
-            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 1407,
             "ephemeral_1h_input_tokens": 0
           },
           "type": "message",

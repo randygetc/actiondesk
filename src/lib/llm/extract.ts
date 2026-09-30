@@ -134,7 +134,14 @@ function request(config: ModelConfig, messages: LlmMessageParam[]): LlmRequest {
   return {
     model: config.model,
     max_tokens: config.maxTokens,
-    system: EXTRACT_SYSTEM,
+    // Cache breakpoint at the end of the stable prefix (tools, then system).
+    system: [
+      {
+        type: "text",
+        text: EXTRACT_SYSTEM,
+        cache_control: { type: "ephemeral" },
+      },
+    ],
     tools: [ADD_TASK_TOOL],
     // Forced tool choice is a 400 on current models; the prompt steers instead.
     tool_choice: { type: "auto" },

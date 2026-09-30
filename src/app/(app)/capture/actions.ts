@@ -7,7 +7,12 @@ import { llmClient } from "@/lib/llm";
 import { isAbort, isApiError } from "@/lib/llm/client";
 import { EXTRACT_PROMPT_VERSION, extractTasks } from "@/lib/llm/extract";
 import { EXTRACT_MODEL } from "@/lib/llm/models";
-import { recordUsage, usageMeter } from "@/lib/llm/usage";
+import {
+  CAP_MESSAGE,
+  capReached,
+  recordUsage,
+  usageMeter,
+} from "@/lib/llm/usage";
 import { log } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import { toUtc } from "@/lib/time/zones";
@@ -86,10 +91,17 @@ async function* run(
 ): AsyncGenerator<CaptureEvent> {
   const meter = usageMeter(EXTRACT_MODEL.model);
   const abort = new AbortController();
-  let outcome: "ok" | "invalid_output" | "error" | "aborted" = "aborted";
+  let outcome: "ok" | "invalid_output" | "error" | "aborted" | "capped" =
+    "aborted";
   let count = 0;
 
   try {
+    // Daily cap (2.6), checked before any API call.
+    if (await capReached(ctx.supabase, ctx.tz)) {
+      outcome = "capped";
+      yield { type: "error", message: CAP_MESSAGE };
+      return;
+    }
     for await (const e of extractTasks(
       llmClient(),
       {

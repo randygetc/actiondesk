@@ -50,5 +50,6 @@ export async function signInAsNewUser(
         sameSite: "Lax" as const,
       })),
   );
-  return { userId: data.session.user.id, email };
+  // `supabase` is signed in as the same user, for setting up test data.
+  return { userId: data.session.user.id, email, supabase };
 }
