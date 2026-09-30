@@ -1,19 +1,19 @@
 [
   {
     "model": "claude-sonnet-5-5",
-    "id": "msg_011CfZ6LejVZjmrnLWiGhHrT",
+    "id": "msg_011CfZ8t1i9grQMW6ry2np6t",
     "type": "message",
     "role": "assistant",
     "content": [
       {
         "type": "tool_use",
-        "id": "toolu_01DXMXrCBuj86mCipypJPQH1",
+        "id": "toolu_01JeHGU7JFkDoWxZKQXzoFVZ",
         "name": "add_task",
         "caller": {
           "type": "direct"
         },
         "input": {
-          "title": "Sign and send back vendor contract to Ana",
+          "title": "Sign and send back vendor contract",
           "assignee": "me",
           "due_date": "2026-10-07",
           "due_time": "15:00",
@@ -28,21 +28,21 @@
     "stop_sequence": null,
     "stop_details": null,
     "usage": {
-      "input_tokens": 2011,
+      "input_tokens": 601,
       "cache_creation_input_tokens": 0,
-      "cache_read_input_tokens": 0,
+      "cache_read_input_tokens": 1407,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
         "ephemeral_1h_input_tokens": 0
       },
-      "output_tokens": 228,
+      "output_tokens": 224,
       "service_tier": "standard",
       "inference_geo": "global",
       "iterations": [
         {
-          "input_tokens": 2011,
-          "output_tokens": 228,
-          "cache_read_input_tokens": 0,
+          "input_tokens": 601,
+          "output_tokens": 224,
+          "cache_read_input_tokens": 1407,
           "cache_creation_input_tokens": 0,
           "cache_creation": {
             "ephemeral_5m_input_tokens": 0,

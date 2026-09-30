@@ -1,13 +1,13 @@
 [
   {
     "model": "claude-sonnet-5-5",
-    "id": "msg_011CfZ6MHT6kXcd6LCuEfySk",
+    "id": "msg_011CfZ8tg9wgJVHLkcfjbkL1",
     "type": "message",
     "role": "assistant",
     "content": [
       {
         "type": "tool_use",
-        "id": "toolu_01NaAgvpRbEm84TxH2qbiELP",
+        "id": "toolu_01YM242wefkDcDVW4HBzQUpn",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -18,7 +18,7 @@
           "due_date": "2026-10-14",
           "due_time": null,
           "project_id": "00000000-0000-4000-8000-000000000003",
-          "confidence": 0.95,
+          "confidence": 0.9,
           "source_quote": "Randy to draft the Q4 Launch FAQ by next Wednesday."
         }
       }
@@ -28,9 +28,9 @@
     "stop_sequence": null,
     "stop_details": null,
     "usage": {
-      "input_tokens": 2007,
+      "input_tokens": 600,
       "cache_creation_input_tokens": 0,
-      "cache_read_input_tokens": 0,
+      "cache_read_input_tokens": 1407,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
         "ephemeral_1h_input_tokens": 0
@@ -40,9 +40,9 @@
       "inference_geo": "global",
       "iterations": [
         {
-          "input_tokens": 2007,
+          "input_tokens": 600,
           "output_tokens": 248,
-          "cache_read_input_tokens": 0,
+          "cache_read_input_tokens": 1407,
           "cache_creation_input_tokens": 0,
           "cache_creation": {
             "ephemeral_5m_input_tokens": 0,

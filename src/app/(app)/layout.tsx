@@ -7,7 +7,9 @@ import { signOut } from "@/app/auth/signout/actions";
 import { requireUser } from "@/lib/auth/user";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
-  await requireUser();
+  const { supabase } = await requireUser();
+  // Only decides whether to show the link; the page itself is gated by RLS.
+  const { data: isAdmin } = await supabase.rpc("is_app_admin");
 
   return (
     <div className="flex flex-1 flex-col">
@@ -18,6 +20,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           <Link href="/capture">Capture</Link>
           <Link href="/projects">Projects</Link>
           <Link href="/settings">Settings</Link>
+          {isAdmin ? <Link href="/admin/usage">Usage</Link> : null}
         </nav>
         <div className="ml-auto">
           <AskPanel

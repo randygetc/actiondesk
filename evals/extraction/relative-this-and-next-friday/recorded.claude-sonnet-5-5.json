@@ -1,13 +1,13 @@
 [
   {
     "model": "claude-sonnet-5-5",
-    "id": "msg_011CfZ6PM6g1gdiWHiaj7ta9",
+    "id": "msg_011CfZ8vdFcdbNBd8nM24V6Z",
     "type": "message",
     "role": "assistant",
     "content": [
       {
         "type": "tool_use",
-        "id": "toolu_016GKjEeES8UW6V4Zg3P85bm",
+        "id": "toolu_01PPWW5Ym2Mhi7MpBiiaAhTT",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -24,7 +24,7 @@
       },
       {
         "type": "tool_use",
-        "id": "toolu_013pdWug47v7DCVktBobyXyJ",
+        "id": "toolu_01TggywctqRTUiAx3HJGFDCk",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -35,7 +35,7 @@
           "due_date": "2026-10-16",
           "due_time": null,
           "project_id": "00000000-0000-4000-8000-000000000002",
-          "confidence": 0.75,
+          "confidence": 0.7,
           "source_quote": "let's review the job post for Hiring together next Friday"
         }
       }
@@ -45,9 +45,9 @@
     "stop_sequence": null,
     "stop_details": null,
     "usage": {
-      "input_tokens": 1951,
+      "input_tokens": 537,
       "cache_creation_input_tokens": 0,
-      "cache_read_input_tokens": 0,
+      "cache_read_input_tokens": 1407,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
         "ephemeral_1h_input_tokens": 0
@@ -57,9 +57,9 @@
       "inference_geo": "global",
       "iterations": [
         {
-          "input_tokens": 1951,
+          "input_tokens": 537,
           "output_tokens": 469,
-          "cache_read_input_tokens": 0,
+          "cache_read_input_tokens": 1407,
           "cache_creation_input_tokens": 0,
           "cache_creation": {
             "ephemeral_5m_input_tokens": 0,

@@ -2,7 +2,7 @@
 
 Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.md.
 
-- **Last updated:** 2026-09-30 (step 2.5: Ask ActionDesk)
+- **Last updated:** 2026-09-30 (step 2.6: cost controls)
 - **Sources:** CLAUDE.md, docs/architecture.md, docs/adr/0001–0005, docs/KICKOFF.md, guardrails/, .claude/
 - **Scope:** Phases 1 and 2 are in full detail. Phase 3 is outlined and gets detailed in step 3.1.
 - **Needs your decision:** the owner items in §7 (risks and gaps in the guardrails). All §6 decisions are made.
@@ -25,8 +25,9 @@ Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.
 | 2.2 | Evals first | done (PR #13); 19 cases **drafted by Claude at the owner's request** (KICKOFF has the owner write them; owner reviews `expected.json`) |
 | 2.3 | Extraction | done (PR #14): live eval 98% on claude-opus-5-5 |
 | 2.4 | Model comparison | done (PR #15): owner chose claude-sonnet-5-5 |
-| 2.5 | Ask ActionDesk | PR open on `phase2/ask`: 4 tools on the user client, proposal-only create_task, cross-user db test |
-| 2.6–2.8 | LLM features | detailed in §3.9; not started |
+| 2.5 | Ask ActionDesk | done (PR #16) |
+| 2.6 | Cost controls | PR open on `phase2/cost-controls`: daily cap (fails closed), prompt caching (−28% extraction cost), admin usage page |
+| 2.7–2.8 | LLM features | detailed in §3.9; not started |
 | 3.x | Workspaces, jobs, prod | outline only |
 
 ### 0.1 Phase 1 summary (2026-09-30)
@@ -676,11 +677,11 @@ Items marked **(owner)** involve locked files that I can't and won't change.
 | R-11 | `supabase/config.toml` has `additional_redirect_urls = ["https://127.0.0.1:3000"]` (https, no path), and Google isn't configured. | Fix both in 1.5; the redirect must allow `http://127.0.0.1:3000/auth/callback`. |
 | R-12 | Realtime `postgres_changes` checks RLS per subscriber per change (slow at scale), and DELETE events aren't RLS-filtered in the same way. | Use Broadcast with private channels and RLS on `realtime.messages`, or soft deletes. Decide at 3.1. |
 | R-13 | Prompt injection through stored task titles: a malicious title created by one member is later read by Ask or the digest for another member. | Treat all DB text as untrusted in prompts. Write tools stay proposal-only. Add an eval or test case at 2.8 and 3.6. |
-| R-14 | Cap bypass: parallel requests all pass the check before any usage is logged. | Accept small overshoot, or reserve estimated cost before the call. Decide at 2.6. |
+| R-14 | ~~Cap bypass by parallel requests~~ | Decided at 2.6: accept an overshoot of at most one call per parallel request (a few cents). The cap check fails closed. |
 | R-15 | Anthropic model IDs and prices change. | `models.ts` and `pricing.ts` are the only places they appear; check the docs at 2.3 and 2.4 (rule 8). |
 | R-16 | The Storage path migration in Phase 3 (per-user → per-workspace paths) is not transactional with the table update. | Copy first, flip the rows, and delete old objects only after verification. Plan it in detail at 3.1. |
 | R-17 | Library versions have moved on (Next 16 `proxy.ts`, Supabase's new publishable and secret API keys, Zod 4, Tailwind 4). | Verify against current docs at 1.3; record choices in docs/conventions.md. |
 | R-18 | Vercel may buffer streamed Server Action responses; the 2.1 spike ran only locally (dev and `next start`). | Check with the extraction stream on the first preview deploy (3.x). If it buffers, propose an ADR; don't work around it. |
-| R-19 | The system prompt plus tools may be below the model's minimum cacheable length, so prompt caching silently does nothing. | Measure `cached_tokens` at 2.6 and record the prompt size. |
+| R-19 | ~~System prompt below the minimum cacheable length~~ | Measured at 2.6: the extraction prefix is 1,407 tokens (Sonnet 5.5's minimum is 512), with 18 of 19 eval calls reading it. Ask hits the cache as well. Re-check if the model changes (Haiku's minimum is 4,096). |
 | R-20 | An attachment is orphaned if the review tab is closed before save or discard (D-21). | Phase 3 cron deletes attachments older than 24 h; until then, a documented cleanup query. |
 | R-21 | `LLM_FAKE` (e2e fake model) must never be active in production. | Honored only when `NODE_ENV !== 'production'`, with a unit test; not set in Vercel. |

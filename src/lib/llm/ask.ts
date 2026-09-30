@@ -71,7 +71,10 @@ function request(
   return {
     model: config.model,
     max_tokens: config.maxTokens,
-    system: ASK_SYSTEM,
+    // Cache breakpoint at the end of the stable prefix (tools, then system).
+    system: [
+      { type: "text", text: ASK_SYSTEM, cache_control: { type: "ephemeral" } },
+    ],
     tools: ASK_TOOLS.map((t) => t.definition),
     // The last round must answer in text; forced tool use isn't allowed anyway.
     tool_choice: { type: finalRound ? "none" : "auto" },

@@ -94,3 +94,38 @@ export async function recordUsage(
   if (error) log.error("llm.usage_log_failed", { ...fields, code: error.code });
   else log.info("llm.call", fields);
 }
+
+const DEFAULT_DAILY_CAP_USD = 1;
+
+/** Per-user daily cap from LLM_DAILY_CAP_USD (plan §3.9, 2.6); $1 if unset or invalid. */
+export function dailyCapUsd(): number {
+  const raw = process.env.LLM_DAILY_CAP_USD;
+  if (raw === undefined || raw === "") return DEFAULT_DAILY_CAP_USD;
+  const cap = Number(raw);
+  if (!Number.isFinite(cap) || cap < 0) {
+    log.warn("llm.cap_invalid", { fallbackUsd: DEFAULT_DAILY_CAP_USD });
+    return DEFAULT_DAILY_CAP_USD;
+  }
+  return cap;
+}
+
+export const CAP_MESSAGE =
+  "You've reached today's AI limit. It resets at midnight.";
+
+/**
+ * True when the user's spend since local midnight has reached the cap. Checked
+ * before each call; parallel calls can overshoot by one call's cost (R-14,
+ * accepted). Fails closed: if spend can't be read, the call is refused.
+ */
+export async function capReached(
+  supabase: SupabaseClient<Database>,
+  tz: string,
+  cap = dailyCapUsd(),
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc("llm_spend_today", { p_tz: tz });
+  if (error) {
+    log.error("llm.cap_check_failed", { code: error.code });
+    return true;
+  }
+  return Number(data) >= cap;
+}
