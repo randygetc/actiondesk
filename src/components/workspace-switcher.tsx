@@ -20,7 +20,11 @@ export function WorkspaceSwitcher({
 }) {
   const form = useRef<HTMLFormElement>(null);
   return (
+    // Keyed by the current workspace: React 19 resets a form's fields after
+    // its action, which snapped the select back to the old default. A new key
+    // remounts it with the new one.
     <form
+      key={currentId}
       ref={form}
       action={action}
       className="flex items-center gap-2 text-sm"
