@@ -29,6 +29,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           <Link href="/tasks">Tasks</Link>
           <Link href="/capture">Capture</Link>
           <Link href="/projects">Projects</Link>
+          <Link href="/workspace">Workspace</Link>
           <Link href="/settings">Settings</Link>
           {isAdmin ? <Link href="/admin/usage">Usage</Link> : null}
         </nav>

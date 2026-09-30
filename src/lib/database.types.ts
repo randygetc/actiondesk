@@ -92,6 +92,67 @@ export type Database = {
           },
         ];
       };
+      invites: {
+        Row: {
+          accepted_at: string | null;
+          accepted_by: string | null;
+          created_at: string;
+          email: string;
+          expires_at: string;
+          id: string;
+          invited_by: string | null;
+          role: Database["public"]["Enums"]["workspace_role"];
+          token_hash: string;
+          workspace_id: string;
+        };
+        Insert: {
+          accepted_at?: string | null;
+          accepted_by?: string | null;
+          created_at?: string;
+          email: string;
+          expires_at?: string;
+          id?: string;
+          invited_by?: string | null;
+          role: Database["public"]["Enums"]["workspace_role"];
+          token_hash: string;
+          workspace_id: string;
+        };
+        Update: {
+          accepted_at?: string | null;
+          accepted_by?: string | null;
+          created_at?: string;
+          email?: string;
+          expires_at?: string;
+          id?: string;
+          invited_by?: string | null;
+          role?: Database["public"]["Enums"]["workspace_role"];
+          token_hash?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "invites_accepted_by_fkey";
+            columns: ["accepted_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "invites_invited_by_fkey";
+            columns: ["invited_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "invites_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       llm_usage: {
         Row: {
           cached_tokens: number;
@@ -398,11 +459,28 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      accept_invite: { Args: { p_token: string }; Returns: string };
       complete_task: {
         Args: { p_next_due_at?: string; p_task_id: string };
         Returns: string;
       };
+      create_invite: {
+        Args: {
+          p_email: string;
+          p_role: Database["public"]["Enums"]["workspace_role"];
+          p_workspace_id: string;
+        };
+        Returns: string;
+      };
       create_workspace: { Args: { p_name: string }; Returns: string };
+      invite_preview: {
+        Args: { p_token: string };
+        Returns: {
+          role: Database["public"]["Enums"]["workspace_role"];
+          status: string;
+          workspace_name: string;
+        }[];
+      };
       is_app_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
       is_member: {
         Args: {

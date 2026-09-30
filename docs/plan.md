@@ -2,7 +2,7 @@
 
 Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.md.
 
-- **Last updated:** 2026-09-30 (step 3.2: migrate to workspaces)
+- **Last updated:** 2026-09-30 (step 3.3: invites)
 - **Sources:** CLAUDE.md, docs/architecture.md, docs/adr/0001–0005, docs/KICKOFF.md, guardrails/, .claude/
 - **Scope:** Phases 1 and 2 are done. Phase 3 is detailed in §4 (3.1).
 - **Needs your decision:** the owner items in §7 (risks and gaps in the guardrails). All §6 decisions are made.
@@ -31,8 +31,9 @@ Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.
 | 2.8 | Injection hardening | done (PR #19): Ask injection eval (gate); security review, 8 findings fixed, 5 deferred (§7) |
 | P2 | Phase 2 checkpoint | done; summary in §0.2. Owner: friction debrief in docs/learnings.md |
 | 3.1 | Phase 3 plan | done (PR #22) |
-| 3.2 | Migrate to workspaces | PR open on `phase3/workspaces`: 3 migrations, rehearsed on seeded data (no rows lost), role matrix in pgTAP 010, code scoped to the current workspace |
-| 3.3–3.12 | Workspaces, jobs, prod | detailed in §4; not started |
+| 3.2 | Migrate to workspaces | done (PRs #23, #24) |
+| 3.3 | Invites | PR open on `phase3/invites`: hashed single-use email-bound links, Workspace page (members, roles, invites, new workspace), two-user e2e |
+| 3.4–3.12 | Workspaces, jobs, prod | detailed in §4; not started |
 
 ### 0.1 Phase 1 summary (2026-09-30)
 
@@ -821,3 +822,4 @@ Items marked **(owner)** involve locked files that I can't and won't change.
 | R-27 | The backfill migration (§4.4 step 2) runs in one transaction over all rows in prod. | Fine at current size; time it on the 3.7 seed before deploying. |
 | R-28 | The current-workspace cookie is set by the client. | It's only a preference: RLS authorizes every read and write, and `getCurrentWorkspace` ignores a workspace the user isn't a member of. Add a test at 3.2. |
 | R-29 | Co-members can read each other's `display_name`. | Mention it in the privacy notes at 3.10. |
+| R-30 | A signed-out invitee's token passes through `/login?next=/invite/<token>` and the OAuth redirect, so it can appear in auth logs. | Accepted: a token works once, only for the invited email (D-16), and expires in 7 days. If needed, park it in a short-lived httpOnly cookie before login. |

@@ -227,3 +227,15 @@ Versions: Next 16.3, React 19.2, TypeScript 5.9, Tailwind 4, Zod 4, Vitest 5, @s
   the current workspace.
 - **pgTAP:** insert with `workspace_id` = `tests.ws()` (the signed-in test user's Personal workspace),
   or `tests.ws(:'user')` when running as `postgres`.
+
+## Invites and e2e habits (step 3.3, 2026-09-30)
+- **Invites:** `create_invite` returns the token once, and only `sha256(token)` is stored.
+  `invite_preview` and `accept_invite` check the email against `auth.jwt()->>'email'`. Error keys
+  (`invite_used` and others) map to messages in `INVITE_ERRORS`. Never log a token.
+- **pgTAP:** `tests.authenticate_as` puts the user's email in the JWT claims and resets the role first,
+  so tests can switch directly between users.
+- **e2e should act like a user.** Don't reload to make an assertion pass. After a Server Action, wait
+  for visible page content before asserting on form state: React 19 resets forms after an action. The
+  workspace switcher bug (#24) was hidden by a reload.
+- **Two users:** make a second context with `browser.newContext({ baseURL })` and sign each in with
+  `signInAsNewUser`. Invite tests need no fake model, so they run locally too.
