@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { CreateProjectForm } from "@/components/projects/create-project-form";
 import { requireUser } from "@/lib/auth/user";
+import { canEdit, currentWorkspace } from "@/lib/workspace/current";
 
 import { createProject } from "./actions";
 
@@ -10,11 +11,14 @@ export default async function ProjectsPage({
 }: PageProps<"/projects">) {
   const { show } = await searchParams;
   const showArchived = show === "archived";
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
+  const { current } = await currentWorkspace(supabase, user.id);
 
+  // RLS would return every workspace the user belongs to; show the current one.
   let query = supabase
     .from("projects")
     .select("id, name, archived_at")
+    .eq("workspace_id", current.id)
     .order("name");
   query = showArchived
     ? query.not("archived_at", "is", null)
@@ -36,7 +40,9 @@ export default async function ProjectsPage({
         </Link>
       </div>
 
-      {showArchived ? null : <CreateProjectForm action={createProject} />}
+      {showArchived || !canEdit(current.role) ? null : (
+        <CreateProjectForm action={createProject} />
+      )}
 
       {projects.length === 0 ? (
         <p className="text-sm text-muted-foreground">

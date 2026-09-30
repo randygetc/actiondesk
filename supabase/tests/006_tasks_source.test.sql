@@ -9,22 +9,22 @@ select tests.create_user('b@example.com') as b \gset
 select tests.authenticate_as(:'a');
 
 select results_eq(
-  $$ insert into public.tasks (title) values ('Manual') returning source::text, source_quote, assignee_text $$,
+  $$ insert into public.tasks (workspace_id, title) values (tests.ws(), 'Manual') returning source::text, source_quote, assignee_text $$,
   $$ values ('manual'::text, null::text, null::text) $$,
   'defaults: source manual, no quote, no assignee'
 );
 select lives_ok(
-  $$ insert into public.tasks (title, source, source_quote, assignee_text)
-       values ('Extracted', 'extraction', 'Randy to send the copy by Friday', 'me') $$,
+  $$ insert into public.tasks (workspace_id, title, source, source_quote, assignee_text)
+       values (tests.ws(), 'Extracted', 'extraction', 'Randy to send the copy by Friday', 'me') $$,
   'owner: can create an extracted task with its quote and assignee'
 );
 select throws_ok(
-  format($$ insert into public.tasks (title, source_quote) values ('Long', %L) $$, repeat('x', 501)),
+  format($$ insert into public.tasks (workspace_id, title, source_quote) values (tests.ws(), 'Long', %L) $$, repeat('x', 501)),
   '23514', null,
   'source_quote is at most 500 characters'
 );
 select throws_ok(
-  format($$ insert into public.tasks (title, assignee_text) values ('Long', %L) $$, repeat('x', 201)),
+  format($$ insert into public.tasks (workspace_id, title, assignee_text) values (tests.ws(), 'Long', %L) $$, repeat('x', 201)),
   '23514', null,
   'assignee_text is at most 200 characters'
 );
@@ -55,7 +55,7 @@ select is_empty(
 
 select tests.authenticate_as_anon();
 select throws_ok(
-  $$ insert into public.tasks (title, source) values ('x', 'extraction') $$,
+  $$ insert into public.tasks (workspace_id, title, source) values (tests.ws(), 'x', 'extraction') $$,
   '42501', null,
   'anon: cannot create tasks'
 );

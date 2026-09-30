@@ -5,11 +5,7 @@ import { revalidatePath } from "next/cache";
 import { randomUUID } from "node:crypto";
 
 import type { ActionResult } from "@/lib/action-result";
-import {
-  detectFile,
-  MIME,
-  type FileKind,
-} from "@/lib/attachments/detect";
+import { detectFile, MIME, type FileKind } from "@/lib/attachments/detect";
 import { fileToNote } from "@/lib/attachments/note";
 import { llmClient } from "@/lib/llm";
 import { isAbort, isApiError } from "@/lib/llm/client";
@@ -24,6 +20,7 @@ import { CAP_MESSAGE, capReached } from "@/lib/llm/usage";
 import { usageRun, type UsageRun } from "@/lib/llm/usage-run";
 import { log } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
+import { currentWorkspace, VIEW_ONLY_MESSAGE } from "@/lib/workspace/current";
 import { toUtc } from "@/lib/time/zones";
 import {
   attachmentIdSchema,
@@ -47,6 +44,8 @@ async function getContext() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { supabase, user: null } as const;
+  // Extracted tasks go into the current workspace (D-23), with its projects.
+  const { current: workspace } = await currentWorkspace(supabase, user.id);
   const [{ data: profile }, { data: projects }] = await Promise.all([
     supabase
       .from("profiles")
@@ -56,6 +55,7 @@ async function getContext() {
     supabase
       .from("projects")
       .select("id, name")
+      .eq("workspace_id", workspace.id)
       .is("archived_at", null)
       .order("name"),
   ]);
@@ -67,6 +67,7 @@ async function getContext() {
     userName:
       profile?.display_name?.trim() || user.email?.split("@")[0] || "the user",
     projects: projects ?? [],
+    workspace,
   } as const;
 }
 
@@ -112,6 +113,7 @@ const extractUsage = (ctx: Ctx) =>
     feature: "extract",
     model: EXTRACT_MODEL.model,
     promptVersion: EXTRACT_PROMPT_VERSION,
+    workspaceId: ctx.workspace.id,
   });
 
 async function* run(
@@ -230,6 +232,7 @@ export async function saveReviewedTasks(
     .from("tasks")
     .insert(
       tasks.map(({ task, row }) => ({
+        workspace_id: ctx.workspace.id,
         title: task.title,
         project_id: task.projectId,
         due_at: task.dueDate
@@ -246,9 +249,11 @@ export async function saveReviewedTasks(
     return {
       ok: false,
       error:
-        error.code === "23503"
-          ? "A project no longer exists. Pick another and try again."
-          : "Couldn't save the tasks. Try again.",
+        error.code === "42501"
+          ? VIEW_ONLY_MESSAGE
+          : error.code === "23503"
+            ? "A project no longer exists in this workspace. Pick another and try again."
+            : "Couldn't save the tasks. Try again.",
     };
   }
 

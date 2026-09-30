@@ -11,6 +11,7 @@ import { requireUser } from "@/lib/auth/user";
 import { GROUP_LABELS, groupTasks } from "@/lib/time/grouping";
 import { END_OF_DAY, toLocalParts } from "@/lib/time/zones";
 import { taskIdSchema } from "@/lib/validation/task";
+import { canEdit, currentWorkspace } from "@/lib/workspace/current";
 
 import {
   completeTask,
@@ -34,12 +35,16 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
     .eq("id", user.id)
     .single();
   const tz = profile?.timezone ?? "America/Los_Angeles";
+  const { current } = await currentWorkspace(supabase, user.id);
+  const editable = canEdit(current.role);
   // The only clock read on this page; grouping itself is pure (plan §1).
   const now = new Date();
 
+  // RLS would return every workspace the user belongs to; show the current one.
   let query = supabase
     .from("tasks")
     .select(TASK_COLUMNS)
+    .eq("workspace_id", current.id)
     .order("due_at", { nullsFirst: false });
   if (!showDone) query = query.neq("status", "done");
   const { data: tasks, error } = await query.limit(500);
@@ -56,13 +61,15 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
   };
 
   const editId = taskIdSchema.safeParse(params.edit);
-  const editing = editId.success
-    ? tasks.find((t) => t.id === editId.data)
-    : undefined;
+  const editing =
+    editId.success && editable
+      ? tasks.find((t) => t.id === editId.data)
+      : undefined;
   const { data: projects } = editing
     ? await supabase
         .from("projects")
         .select("id, name")
+        .eq("workspace_id", current.id)
         .or(
           `archived_at.is.null,id.eq.${editing.project_id ?? "00000000-0000-0000-0000-000000000000"}`,
         )
@@ -78,6 +85,7 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
       editHref={withParams({ edit: task.id })}
       completeAction={completeTask}
       reopenAction={reopenTask}
+      readOnly={!editable}
     />
   );
 
@@ -93,11 +101,17 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
         </Link>
       </div>
 
-      <QuickAddForm action={createTask} />
+      {editable ? (
+        <QuickAddForm action={createTask} />
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          You can view {current.name} but not edit it.
+        </p>
+      )}
 
       {groups.length === 0 && !showDone ? (
         <p className="text-sm text-muted-foreground">
-          Nothing to do. Add a task above.
+          {editable ? "Nothing to do. Add a task above." : "Nothing to do."}
         </p>
       ) : null}
 

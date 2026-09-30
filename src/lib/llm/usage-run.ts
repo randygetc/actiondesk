@@ -26,6 +26,8 @@ export function usageRun(args: {
   feature: Feature;
   model: string;
   promptVersion: string;
+  /** For reporting (D-25); the cap stays per user. */
+  workspaceId?: string;
 }) {
   const meter = usageMeter(args.model);
   const controller = new AbortController();
@@ -42,6 +44,7 @@ export function usageRun(args: {
       outcome,
       meter,
       promptVersion: args.promptVersion,
+      workspaceId: args.workspaceId,
     });
   }
 

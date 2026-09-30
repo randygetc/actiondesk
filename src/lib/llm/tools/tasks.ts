@@ -85,6 +85,7 @@ export const searchTasks = defineTool({
     let q = ctx.supabase
       .from("tasks")
       .select(TASK_FIELDS)
+      .eq("workspace_id", ctx.workspaceId)
       .order("due_at", { ascending: true, nullsFirst: false })
       .limit(20);
     if (i.query) q = q.ilike("title", `%${escapeLike(i.query)}%`);
@@ -115,6 +116,7 @@ export const listOverdue = defineTool({
     const { data, error } = await ctx.supabase
       .from("tasks")
       .select(TASK_FIELDS)
+      .eq("workspace_id", ctx.workspaceId)
       .lt("due_at", ctx.now.toISOString())
       .neq("status", "done")
       .order("due_at")
@@ -144,6 +146,7 @@ export const getProjectSummary = defineTool({
       .from("projects")
       .select("id, name, archived_at")
       .eq("id", i.project_id)
+      .eq("workspace_id", ctx.workspaceId)
       .maybeSingle();
     if (error) throw new Error(`get_project_summary: ${error.code}`);
     // Another user's project is invisible under RLS: same answer as missing.
@@ -221,6 +224,7 @@ export const createTask = defineTool({
         .from("projects")
         .select("name")
         .eq("id", i.project_id)
+        .eq("workspace_id", ctx.workspaceId)
         .maybeSingle();
       if (!data)
         return { result: { proposed: false, error: "Unknown project." } };
@@ -232,6 +236,7 @@ export const createTask = defineTool({
         note: "Shown to the user as a proposal. Nothing is saved unless they confirm.",
       },
       proposal: {
+        workspaceId: ctx.workspaceId,
         title: i.title,
         dueDate: i.due_date,
         dueTime: i.due_time,

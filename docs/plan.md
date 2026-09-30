@@ -2,7 +2,7 @@
 
 Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.md.
 
-- **Last updated:** 2026-09-30 (step 3.1: Phase 3 plan)
+- **Last updated:** 2026-09-30 (step 3.2: migrate to workspaces)
 - **Sources:** CLAUDE.md, docs/architecture.md, docs/adr/0001–0005, docs/KICKOFF.md, guardrails/, .claude/
 - **Scope:** Phases 1 and 2 are done. Phase 3 is detailed in §4 (3.1).
 - **Needs your decision:** the owner items in §7 (risks and gaps in the guardrails). All §6 decisions are made.
@@ -30,8 +30,9 @@ Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.
 | 2.7 | Attachments | done (PR #18) |
 | 2.8 | Injection hardening | done (PR #19): Ask injection eval (gate); security review, 8 findings fixed, 5 deferred (§7) |
 | P2 | Phase 2 checkpoint | done; summary in §0.2. Owner: friction debrief in docs/learnings.md |
-| 3.1 | Phase 3 plan | PR open on `phase3/plan`: workspaces refactor detailed (§4); D-23–D-25 decided |
-| 3.2–3.12 | Workspaces, jobs, prod | detailed in §4; not started |
+| 3.1 | Phase 3 plan | done (PR #22) |
+| 3.2 | Migrate to workspaces | PR open on `phase3/workspaces`: 3 migrations, rehearsed on seeded data (no rows lost), role matrix in pgTAP 010, code scoped to the current workspace |
+| 3.3–3.12 | Workspaces, jobs, prod | detailed in §4; not started |
 
 ### 0.1 Phase 1 summary (2026-09-30)
 
@@ -681,7 +682,7 @@ Goal (KICKOFF): workspaces with roles, safe migration of existing data, realtime
 - **In prod:**
   - take a snapshot or backup before `db push` (a step in docs/deploy.md);
   - if it goes wrong after deploy, a **forward-fix** migration restores the `… own` policies. That works because `owner_id` was kept and never changed. Workspace tables can then be left in place, unused.
-  - That revert migration is written and tested locally at 3.2 but **not committed** unless needed. Its SQL goes in docs/deploy.md.
+  - The revert is in `docs/rollback/workspaces-policies.sql`. It was tested at 3.2 inside a rolled-back transaction: a user saw exactly their own rows. It's copied into a new migration only if needed (R7).
 
 **Rehearsal (3.2):**
 - a seed script (`supabase/seed/phase3-rehearsal.sql`, local only): 2 users, 3 projects each, recurring and one-off tasks, completed series, llm_usage rows;

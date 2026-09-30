@@ -14,6 +14,8 @@ import type { LlmTool } from "../client";
  */
 export type ToolContext = {
   supabase: SupabaseClient<Database>;
+  /** The current workspace (D-23). Queries filter by it on top of RLS. */
+  workspaceId: string;
   now: Date;
   timezone: string;
 };

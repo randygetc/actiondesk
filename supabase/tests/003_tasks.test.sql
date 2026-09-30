@@ -7,10 +7,10 @@ select plan(46);
 select tests.create_user('a@example.com') as a \gset
 select tests.create_user('b@example.com') as b \gset
 
-insert into public.projects (owner_id, name) values (:'a', 'A project') returning id as pa \gset
-insert into public.projects (owner_id, name) values (:'b', 'B project') returning id as pb \gset
-insert into public.tasks (owner_id, title, due_at, recurrence, recurrence_tz)
-  values (:'b', 'B task', '2026-10-06 16:00+00', 'FREQ=DAILY', 'America/Los_Angeles')
+insert into public.projects (workspace_id, owner_id, name) values (tests.ws(:'a'), :'a', 'A project') returning id as pa \gset
+insert into public.projects (workspace_id, owner_id, name) values (tests.ws(:'b'), :'b', 'B project') returning id as pb \gset
+insert into public.tasks (workspace_id, owner_id, title, due_at, recurrence, recurrence_tz)
+  values (tests.ws(:'b'), :'b', 'B task', '2026-10-06 16:00+00', 'FREQ=DAILY', 'America/Los_Angeles')
   returning id as tb \gset
 
 -- insert ------------------------------------------------------------------
@@ -18,7 +18,7 @@ insert into public.tasks (owner_id, title, due_at, recurrence, recurrence_tz)
 select tests.authenticate_as(:'a');
 
 select lives_ok(
-  $$ insert into public.tasks (title) values ('Plain') $$,
+  $$ insert into public.tasks (workspace_id, title) values (tests.ws(), 'Plain') $$,
   'owner: can create a task'
 );
 select results_eq(
@@ -28,65 +28,65 @@ select results_eq(
   'defaults: owner is the user, todo, normal, not completed, no series'
 );
 select lives_ok(
-  format($$ insert into public.tasks (title, project_id) values ('In project', %L) $$, :'pa'),
+  format($$ insert into public.tasks (workspace_id, title, project_id) values (tests.ws(), 'In project', %L) $$, :'pa'),
   'owner: can create a task in their own project'
 );
 select throws_ok(
-  format($$ insert into public.tasks (title, project_id) values ('Sneaky', %L) $$, :'pb'),
+  format($$ insert into public.tasks (workspace_id, title, project_id) values (tests.ws(), 'Sneaky', %L) $$, :'pb'),
   '23503', null,
   'cannot create a task in another user''s project (composite FK)'
 );
 select throws_ok(
-  format($$ insert into public.tasks (owner_id, title) values (%L, 'Sneaky') $$, :'b'),
+  format($$ insert into public.tasks (workspace_id, owner_id, title) values (tests.ws(), %L, 'Sneaky') $$, :'b'),
   '42501', null,
   'cannot set owner_id'
 );
 select throws_ok(
-  $$ insert into public.tasks (title, completed_at) values ('x', now()) $$,
+  $$ insert into public.tasks (workspace_id, title, completed_at) values (tests.ws(), 'x', now()) $$,
   '42501', null,
   'cannot set completed_at directly'
 );
 select throws_ok(
-  format($$ insert into public.tasks (title, due_at, recurrence, recurrence_tz, series_id)
-            values ('Hijack', now(), 'FREQ=DAILY', 'UTC', %L) $$, :'tb'),
+  format($$ insert into public.tasks (workspace_id, title, due_at, recurrence, recurrence_tz, series_id)
+            values (tests.ws(), 'Hijack', now(), 'FREQ=DAILY', 'UTC', %L) $$, :'tb'),
   '42501', null,
   'cannot attach a task to another user''s series'
 );
 
 -- constraints -------------------------------------------------------------
 
-select throws_ok($$ insert into public.tasks (title) values ('') $$, '23514', null, 'empty title rejected');
-select throws_ok($$ insert into public.tasks (title) values (' x ') $$, '23514', null, 'untrimmed title rejected');
+select throws_ok($$ insert into public.tasks (workspace_id, title) values (tests.ws(), '') $$, '23514', null, 'empty title rejected');
+select throws_ok($$ insert into public.tasks (workspace_id, title) values (tests.ws(), ' x ') $$, '23514', null, 'untrimmed title rejected');
 select throws_ok(
-  format($$ insert into public.tasks (title) values (%L) $$, repeat('x', 201)),
+  format($$ insert into public.tasks (workspace_id, title) values (tests.ws(), %L) $$, repeat('x', 201)),
   '23514', null, 'title over 200 characters rejected'
 );
 select throws_ok(
-  format($$ insert into public.tasks (title, notes) values ('x', %L) $$, repeat('x', 10001)),
+  format($$ insert into public.tasks (workspace_id, title, notes) values (tests.ws(), 'x', %L) $$, repeat('x', 10001)),
   '23514', null, 'notes over 10,000 characters rejected'
 );
 select throws_ok(
-  $$ insert into public.tasks (title, recurrence, recurrence_tz) values ('x', 'FREQ=DAILY', 'UTC') $$,
+  $$ insert into public.tasks (workspace_id, title, recurrence, recurrence_tz) values (tests.ws(), 'x', 'FREQ=DAILY', 'UTC') $$,
   '23514', null, 'recurrence without a due date rejected'
 );
 select throws_ok(
-  $$ insert into public.tasks (title, due_at, recurrence, recurrence_tz)
-       values ('x', now(), 'FREQ=YEARLY', 'UTC') $$,
+  $$ insert into public.tasks (workspace_id, title, due_at, recurrence, recurrence_tz)
+       values (tests.ws(), 'x', now(), 'FREQ=YEARLY', 'UTC') $$,
   '23514', null, 'recurrence outside the presets rejected'
 );
 select throws_ok(
-  $$ insert into public.tasks (title, due_at, recurrence, recurrence_tz)
-       values ('x', now(), 'FREQ=DAILY', 'Mars/Olympus_Mons') $$,
+  $$ insert into public.tasks (workspace_id, title, due_at, recurrence, recurrence_tz)
+       values (tests.ws(), 'x', now(), 'FREQ=DAILY', 'Mars/Olympus_Mons') $$,
   '22023', null, 'invalid recurrence_tz rejected'
 );
 select throws_ok(
-  $$ insert into public.tasks (title, due_at, recurrence) values ('x', now(), 'FREQ=DAILY') $$,
+  $$ insert into public.tasks (workspace_id, title, due_at, recurrence) values (tests.ws(), 'x', now(), 'FREQ=DAILY') $$,
   '23514', null, 'recurrence without recurrence_tz rejected'
 );
 
 -- A recurring task, due Tue 2026-10-06 09:00 Pacific.
-insert into public.tasks (title, due_at, recurrence, recurrence_tz, project_id)
-  values ('Standup', '2026-10-06 16:00+00', 'FREQ=WEEKLY;BYDAY=TU', 'America/Los_Angeles', :'pa')
+insert into public.tasks (workspace_id, title, due_at, recurrence, recurrence_tz, project_id)
+  values (tests.ws(), 'Standup', '2026-10-06 16:00+00', 'FREQ=WEEKLY;BYDAY=TU', 'America/Los_Angeles', :'pa')
   returning id as ta \gset
 select is(
   (select series_id from public.tasks where id = :'ta'),
@@ -94,13 +94,13 @@ select is(
   'a recurring task starts its own series'
 );
 select lives_ok(
-  $$ insert into public.tasks (title, due_at, recurrence, recurrence_tz)
-       values ('Weekdays', now(), 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR', 'UTC'),
-              ('Every 2 weeks', now(), 'FREQ=WEEKLY;INTERVAL=2;BYDAY=FR', 'UTC'),
-              ('Monthly 15th', now(), 'FREQ=MONTHLY;BYMONTHDAY=15', 'UTC'),
-              ('Monthly last day', now(), 'FREQ=MONTHLY;BYMONTHDAY=-1', 'UTC'),
-              ('2nd Tuesday', now(), 'FREQ=MONTHLY;BYDAY=2TU', 'UTC'),
-              ('Last Friday', now(), 'FREQ=MONTHLY;BYDAY=-1FR', 'UTC') $$,
+  $$ insert into public.tasks (workspace_id, title, due_at, recurrence, recurrence_tz)
+       values (tests.ws(), 'Weekdays', now(), 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR', 'UTC'),
+              (tests.ws(), 'Every 2 weeks', now(), 'FREQ=WEEKLY;INTERVAL=2;BYDAY=FR', 'UTC'),
+              (tests.ws(), 'Monthly 15th', now(), 'FREQ=MONTHLY;BYMONTHDAY=15', 'UTC'),
+              (tests.ws(), 'Monthly last day', now(), 'FREQ=MONTHLY;BYMONTHDAY=-1', 'UTC'),
+              (tests.ws(), '2nd Tuesday', now(), 'FREQ=MONTHLY;BYDAY=2TU', 'UTC'),
+              (tests.ws(), 'Last Friday', now(), 'FREQ=MONTHLY;BYDAY=-1FR', 'UTC') $$,
   'every preset shape is accepted'
 );
 
@@ -242,7 +242,7 @@ select results_eq(
 
 select tests.authenticate_as_anon();
 select throws_ok($$ select * from public.tasks $$, '42501', null, 'anon: cannot select');
-select throws_ok($$ insert into public.tasks (title) values ('x') $$, '42501', null, 'anon: cannot insert');
+select throws_ok($$ insert into public.tasks (workspace_id, title) values (tests.ws(), 'x') $$, '42501', null, 'anon: cannot insert');
 select throws_ok($$ update public.tasks set title = 'x' $$, '42501', null, 'anon: cannot update');
 select throws_ok($$ delete from public.tasks $$, '42501', null, 'anon: cannot delete');
 select throws_ok(

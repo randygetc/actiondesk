@@ -86,6 +86,7 @@ async function runCase(c: (typeof cases)[number]): Promise<Result> {
       client,
       {
         supabase: db.client,
+        workspaceId: "00000000-0000-4000-8000-0000000000aa",
         now,
         timezone: "Asia/Manila",
         userName: "Randy",

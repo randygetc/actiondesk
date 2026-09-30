@@ -12,6 +12,7 @@ import { CAP_MESSAGE, capReached } from "@/lib/llm/usage";
 import { usageRun, type UsageRun } from "@/lib/llm/usage-run";
 import { log } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
+import { currentWorkspace, VIEW_ONLY_MESSAGE } from "@/lib/workspace/current";
 import { toUtc } from "@/lib/time/zones";
 import { askInputSchema, createTaskProposalSchema } from "@/lib/validation/ask";
 import { taskFormSchema } from "@/lib/validation/task";
@@ -25,6 +26,8 @@ async function getContext() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { supabase, user: null } as const;
+  // Ask answers about the current workspace (D-23).
+  const { current: workspace } = await currentWorkspace(supabase, user.id);
   const [{ data: profile }, { data: projects }] = await Promise.all([
     supabase
       .from("profiles")
@@ -34,6 +37,7 @@ async function getContext() {
     supabase
       .from("projects")
       .select("id, name")
+      .eq("workspace_id", workspace.id)
       .is("archived_at", null)
       .order("name"),
   ]);
@@ -44,6 +48,7 @@ async function getContext() {
     userName:
       profile?.display_name?.trim() || user.email?.split("@")[0] || "the user",
     projects: projects ?? [],
+    workspace,
   } as const;
 }
 
@@ -79,6 +84,7 @@ export async function askStream(
       feature: "ask",
       model: ASK_MODEL.model,
       promptVersion: ASK_PROMPT_VERSION,
+      workspaceId: ctx.workspace.id,
     }),
   );
 }
@@ -109,6 +115,7 @@ async function* run(
       llmClient(),
       {
         supabase: ctx.supabase,
+        workspaceId: ctx.workspace.id,
         now: new Date(),
         timezone: ctx.tz,
         userName: ctx.userName,
@@ -189,6 +196,7 @@ export async function confirmCreateTask(
   const { data, error } = await ctx.supabase
     .from("tasks")
     .insert({
+      workspace_id: p.data.workspaceId,
       title: task.title,
       priority: task.priority,
       project_id: task.projectId,
@@ -204,9 +212,11 @@ export async function confirmCreateTask(
     return {
       ok: false,
       error:
-        error.code === "23503"
-          ? "That project no longer exists."
-          : "Couldn't create the task. Try again.",
+        error.code === "42501"
+          ? VIEW_ONLY_MESSAGE
+          : error.code === "23503"
+            ? "That project no longer exists."
+            : "Couldn't create the task. Try again.",
     };
   }
 

@@ -220,3 +220,10 @@ Versions: Next 16.3, React 19.2, TypeScript 5.9, Tailwind 4, Zod 4, Vitest 5, @s
   RLS decides what they may see or change at all.
 - **Policies call `my_workspaces(min_role)`,** never `workspace_members` directly. That avoids
   recursion, and it's evaluated once per statement.
+- **Creates** take the workspace from the parent (a task created in a project goes into the project's
+  workspace), else the current workspace. **Writes RLS refuses** (`42501`, or 0 rows on a row the user
+  can see) show `VIEW_ONLY_MESSAGE`.
+- **Pages showing one row** (a project page) use that row's workspace and the user's role in it, not
+  the current workspace.
+- **pgTAP:** insert with `workspace_id` = `tests.ws()` (the signed-in test user's Personal workspace),
+  or `tests.ws(:'user')` when running as `postgres`.

@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 import { nextOccurrence } from "@/lib/time/recurrence";
 import { toUtc } from "@/lib/time/zones";
 import { taskFormSchema, taskIdSchema } from "@/lib/validation/task";
+import { currentWorkspace, VIEW_ONLY_MESSAGE } from "@/lib/workspace/current";
 
 export type TaskResult = ActionResult<{ id: string }>;
 
@@ -26,6 +27,7 @@ function invalid(error: z.ZodError): TaskResult {
 
 const signedOut: TaskResult = { ok: false, error: "You are signed out." };
 const notFound: TaskResult = { ok: false, error: "Task not found." };
+const viewOnly: TaskResult = { ok: false, error: VIEW_ONLY_MESSAGE };
 
 /** Maps Postgres errors to messages; never returns raw DB errors to the client. */
 function dbError(
@@ -33,10 +35,12 @@ function dbError(
   userId: string,
   event: string,
 ): TaskResult {
+  if (code === "42501") return viewOnly;
   if (code === "23503") {
+    // Includes a project from another workspace (composite FK, step 3.2).
     return {
       ok: false,
-      error: "Project not found.",
+      error: "Project not found in this workspace.",
       fieldErrors: { projectId: ["Project not found"] },
     };
   }
@@ -129,9 +133,24 @@ export async function createTask(
   if (!user) return signedOut;
 
   const t = parsed.data;
+  // A task goes where its project is (the project page may show a workspace
+  // other than the current one); otherwise into the current workspace (D-23).
+  let workspaceId: string;
+  if (t.projectId) {
+    const { data: project } = await supabase
+      .from("projects")
+      .select("workspace_id")
+      .eq("id", t.projectId)
+      .maybeSingle();
+    if (!project) return dbError("23503", user.id, "task.create_failed");
+    workspaceId = project.workspace_id;
+  } else {
+    workspaceId = (await currentWorkspace(supabase, user.id)).current.id;
+  }
   const { data, error } = await supabase
     .from("tasks")
     .insert({
+      workspace_id: workspaceId,
       title: t.title,
       notes: t.notes,
       status: t.status === "done" ? "todo" : t.status,
@@ -192,7 +211,8 @@ export async function updateTask(
     .eq("id", id.data)
     .select("id");
   if (error) return dbError(error.code, user.id, "task.update_failed");
-  if (data.length === 0) return notFound;
+  // The task was visible above, so 0 rows means RLS refused the write.
+  if (data.length === 0) return viewOnly;
 
   if (completing) {
     const done = await complete(supabase, id.data, new Date());

@@ -7,14 +7,14 @@ select tests.create_user('a@example.com') as a \gset
 select tests.create_user('b@example.com') as b \gset
 
 -- Seed one project for B as the superuser.
-insert into public.projects (owner_id, name) values (:'b', 'B project') returning id as b_project \gset
+insert into public.projects (workspace_id, owner_id, name) values (tests.ws(:'b'), :'b', 'B project') returning id as b_project \gset
 
 -- insert ------------------------------------------------------------------
 
 select tests.authenticate_as(:'a');
 
 select lives_ok(
-  $$ insert into public.projects (name) values ('Launch') $$,
+  $$ insert into public.projects (workspace_id, name) values (tests.ws(), 'Launch') $$,
   'owner: can create a project'
 );
 select is(
@@ -23,32 +23,32 @@ select is(
   'owner_id defaults to the signed-in user'
 );
 select throws_ok(
-  format($$ insert into public.projects (owner_id, name) values (%L, 'Sneaky') $$, :'b'),
+  format($$ insert into public.projects (workspace_id, owner_id, name) values (tests.ws(), %L, 'Sneaky') $$, :'b'),
   '42501', null,
   'other user: cannot create a project owned by someone else'
 );
 select throws_ok(
-  $$ insert into public.projects (name) values ('launch') $$,
+  $$ insert into public.projects (workspace_id, name) values (tests.ws(), 'launch') $$,
   '23505', null,
   'duplicate name (case-insensitive) is rejected'
 );
 select throws_ok(
-  $$ insert into public.projects (name) values ('') $$,
+  $$ insert into public.projects (workspace_id, name) values (tests.ws(), '') $$,
   '23514', null,
   'empty name is rejected'
 );
 select throws_ok(
-  $$ insert into public.projects (name) values ('  padded  ') $$,
+  $$ insert into public.projects (workspace_id, name) values (tests.ws(), '  padded  ') $$,
   '23514', null,
   'untrimmed name is rejected'
 );
 select throws_ok(
-  format($$ insert into public.projects (name) values (%L) $$, repeat('x', 101)),
+  format($$ insert into public.projects (workspace_id, name) values (tests.ws(), %L) $$, repeat('x', 101)),
   '23514', null,
   'name over 100 characters is rejected'
 );
 select lives_ok(
-  $$ insert into public.projects (name) values ('B project') $$,
+  $$ insert into public.projects (workspace_id, name) values (tests.ws(), 'B project') $$,
   'the same name is fine for a different user'
 );
 
@@ -124,7 +124,7 @@ select is(
 
 select tests.authenticate_as_anon();
 select throws_ok($$ select * from public.projects $$, '42501', null, 'anon: cannot select');
-select throws_ok($$ insert into public.projects (name) values ('x') $$, '42501', null, 'anon: cannot insert');
+select throws_ok($$ insert into public.projects (workspace_id, name) values (tests.ws(), 'x') $$, '42501', null, 'anon: cannot insert');
 select throws_ok($$ update public.projects set name = 'x' $$, '42501', null, 'anon: cannot update');
 select throws_ok($$ delete from public.projects $$, '42501', null, 'anon: cannot delete');
 select tests.clear_authentication();
