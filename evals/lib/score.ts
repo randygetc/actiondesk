@@ -2,8 +2,13 @@ import { toUtc } from "@/lib/time/zones";
 
 import type { CaseContext, ScoredTask } from "./schema";
 
-/** Titles pair up when their word overlap (Jaccard) is at least this. */
-export const TITLE_MATCH_THRESHOLD = 0.5;
+/**
+ * Titles pair up when this share of the shorter title's words appear in the
+ * other (overlap coefficient). Changed from Jaccard ≥ 0.5 at step 2.3: correct
+ * but longer titles ("Sign the vendor contract and send it back to Ana" for
+ * "Sign and return the vendor contract") failed to pair.
+ */
+export const TITLE_MATCH_THRESHOLD = 0.6;
 
 const STOPWORDS = new Set(
   "a an and the to for of on in at with by from my our is be it this that".split(
@@ -28,7 +33,8 @@ export function titleSimilarity(a: string, b: string): number {
   if (x.size === 0 && y.size === 0) return 1;
   let shared = 0;
   for (const w of x) if (y.has(w)) shared++;
-  return shared / (x.size + y.size - shared);
+  if (x.size === 0 || y.size === 0) return 0;
+  return shared / Math.min(x.size, y.size);
 }
 
 export type Pair = { expected: ScoredTask; actual: ScoredTask; sim: number };

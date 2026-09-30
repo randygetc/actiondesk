@@ -1,5 +1,13 @@
 import "server-only";
 
-// The only place the Anthropic SDK may be imported (ADR-0002, rule R2).
-// Placeholder until Phase 2; no SDK is installed yet.
-export {};
+import { anthropicClient, type LlmClient } from "./client";
+import { fakeClient, isFakeLlm } from "./fake";
+
+// The LLM module's entry point for app code (ADR-0002). Features call
+// llmClient() rather than choosing a client themselves.
+
+export function llmClient(): LlmClient {
+  return isFakeLlm() ? fakeClient : anthropicClient;
+}
+
+export { isFakeLlm };

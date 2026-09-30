@@ -63,3 +63,20 @@ export function isValidDate(date: string): boolean {
     return false;
   }
 }
+
+/**
+ * The next `days` local dates from `instant`'s day in the zone, with short
+ * weekday names, e.g. for giving an LLM a calendar to resolve "next Friday".
+ */
+export function calendar(
+  instant: Date,
+  tz: string,
+  days: number,
+): { date: string; weekday: string }[] {
+  const start = toZoned(instant, tz).toPlainDate();
+  const names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  return Array.from({ length: days }, (_, i) => {
+    const d = start.add({ days: i });
+    return { date: d.toString(), weekday: names[d.dayOfWeek - 1] };
+  });
+}

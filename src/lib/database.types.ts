@@ -34,6 +34,62 @@ export type Database = {
   };
   public: {
     Tables: {
+      llm_usage: {
+        Row: {
+          cached_tokens: number;
+          cost_usd: number;
+          created_at: string;
+          feature: Database["public"]["Enums"]["llm_feature"];
+          id: string;
+          input_tokens: number;
+          latency_ms: number;
+          model: string;
+          outcome: Database["public"]["Enums"]["llm_outcome"];
+          output_tokens: number;
+          prompt_version: string | null;
+          request_id: string | null;
+          user_id: string;
+        };
+        Insert: {
+          cached_tokens?: number;
+          cost_usd?: number;
+          created_at?: string;
+          feature: Database["public"]["Enums"]["llm_feature"];
+          id?: string;
+          input_tokens?: number;
+          latency_ms?: number;
+          model: string;
+          outcome: Database["public"]["Enums"]["llm_outcome"];
+          output_tokens?: number;
+          prompt_version?: string | null;
+          request_id?: string | null;
+          user_id?: string;
+        };
+        Update: {
+          cached_tokens?: number;
+          cost_usd?: number;
+          created_at?: string;
+          feature?: Database["public"]["Enums"]["llm_feature"];
+          id?: string;
+          input_tokens?: number;
+          latency_ms?: number;
+          model?: string;
+          outcome?: Database["public"]["Enums"]["llm_outcome"];
+          output_tokens?: number;
+          prompt_version?: string | null;
+          request_id?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "llm_usage_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       profiles: {
         Row: {
           created_at: string;
@@ -95,6 +151,7 @@ export type Database = {
       };
       tasks: {
         Row: {
+          assignee_text: string | null;
           completed_at: string | null;
           created_at: string;
           due_at: string | null;
@@ -106,11 +163,14 @@ export type Database = {
           recurrence: string | null;
           recurrence_tz: string | null;
           series_id: string | null;
+          source: Database["public"]["Enums"]["task_source"];
+          source_quote: string | null;
           status: Database["public"]["Enums"]["task_status"];
           title: string;
           updated_at: string;
         };
         Insert: {
+          assignee_text?: string | null;
           completed_at?: string | null;
           created_at?: string;
           due_at?: string | null;
@@ -122,11 +182,14 @@ export type Database = {
           recurrence?: string | null;
           recurrence_tz?: string | null;
           series_id?: string | null;
+          source?: Database["public"]["Enums"]["task_source"];
+          source_quote?: string | null;
           status?: Database["public"]["Enums"]["task_status"];
           title: string;
           updated_at?: string;
         };
         Update: {
+          assignee_text?: string | null;
           completed_at?: string | null;
           created_at?: string;
           due_at?: string | null;
@@ -138,6 +201,8 @@ export type Database = {
           recurrence?: string | null;
           recurrence_tz?: string | null;
           series_id?: string | null;
+          source?: Database["public"]["Enums"]["task_source"];
+          source_quote?: string | null;
           status?: Database["public"]["Enums"]["task_status"];
           title?: string;
           updated_at?: string;
@@ -168,9 +233,28 @@ export type Database = {
         Args: { p_next_due_at?: string; p_task_id: string };
         Returns: string;
       };
+      llm_spend_today: { Args: { p_tz: string }; Returns: number };
+      log_llm_usage: {
+        Args: {
+          p_cached_tokens: number;
+          p_cost_usd: number;
+          p_feature: Database["public"]["Enums"]["llm_feature"];
+          p_input_tokens: number;
+          p_latency_ms: number;
+          p_model: string;
+          p_outcome: Database["public"]["Enums"]["llm_outcome"];
+          p_output_tokens: number;
+          p_prompt_version?: string;
+          p_request_id?: string;
+        };
+        Returns: string;
+      };
     };
     Enums: {
+      llm_feature: "extract" | "ask";
+      llm_outcome: "ok" | "invalid_output" | "error" | "capped" | "aborted";
       task_priority: "low" | "normal" | "high" | "urgent";
+      task_source: "manual" | "extraction" | "ask";
       task_status: "todo" | "doing" | "done";
     };
     CompositeTypes: {
@@ -302,7 +386,10 @@ export const Constants = {
   },
   public: {
     Enums: {
+      llm_feature: ["extract", "ask"],
+      llm_outcome: ["ok", "invalid_output", "error", "capped", "aborted"],
       task_priority: ["low", "normal", "high", "urgent"],
+      task_source: ["manual", "extraction", "ask"],
       task_status: ["todo", "doing", "done"],
     },
   },

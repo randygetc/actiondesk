@@ -13,6 +13,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         <span className="font-semibold">ActionDesk</span>
         <nav className="flex gap-4 text-sm">
           <Link href="/tasks">Tasks</Link>
+          <Link href="/capture">Capture</Link>
           <Link href="/projects">Projects</Link>
           <Link href="/settings">Settings</Link>
         </nav>
