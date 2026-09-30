@@ -2,7 +2,7 @@
 
 Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.md.
 
-- **Last updated:** 2026-09-30 (step 3.3: invites)
+- **Last updated:** 2026-09-30 (step 3.4: realtime)
 - **Sources:** CLAUDE.md, docs/architecture.md, docs/adr/0001–0005, docs/KICKOFF.md, guardrails/, .claude/
 - **Scope:** Phases 1 and 2 are done. Phase 3 is detailed in §4 (3.1).
 - **Needs your decision:** the owner items in §7 (risks and gaps in the guardrails). All §6 decisions are made.
@@ -32,8 +32,9 @@ Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.
 | P2 | Phase 2 checkpoint | done; summary in §0.2. Owner: friction debrief in docs/learnings.md |
 | 3.1 | Phase 3 plan | done (PR #22) |
 | 3.2 | Migrate to workspaces | done (PRs #23, #24) |
-| 3.3 | Invites | PR open on `phase3/invites`: hashed single-use email-bound links, Workspace page (members, roles, invites, new workspace), two-user e2e |
-| 3.4–3.12 | Workspaces, jobs, prod | detailed in §4; not started |
+| 3.3 | Invites | done (PR #25) |
+| 3.4 | Realtime | PR open on `phase3/realtime`: private Broadcast per workspace (RLS on realtime.messages), refresh-on-change (no duplicates), catch-up after reconnect |
+| 3.5–3.12 | Workspaces, jobs, prod | detailed in §4; not started |
 
 ### 0.1 Phase 1 summary (2026-09-30)
 
@@ -804,7 +805,7 @@ Items marked **(owner)** involve locked files that I can't and won't change.
 | R-9 | Rule 13 (no index without measurements) vs normal practice of indexing foreign keys. Phase 1 will have no FK or `due_at` indexes. | Accept it: data is tiny until 3.7, which measures and adds them. Flag if you'd rather allow FK indexes up front. |
 | R-10 | `complete_task` race conditions and double submits. | `unique (series_id, due_at)` plus an idempotent function, with a test that runs it twice concurrently. |
 | R-11 | `supabase/config.toml` has `additional_redirect_urls = ["https://127.0.0.1:3000"]` (https, no path), and Google isn't configured. | Fix both in 1.5; the redirect must allow `http://127.0.0.1:3000/auth/callback`. |
-| R-12 | Realtime `postgres_changes` checks RLS per subscriber per change (slow at scale), and DELETE events aren't RLS-filtered in the same way. | Use Broadcast with private channels and RLS on `realtime.messages`, or soft deletes. Decide at 3.1. |
+| R-12 | ~~postgres_changes cost and unfiltered DELETE events~~ | Resolved at 3.4: private Broadcast from triggers, authorized by RLS on `realtime.messages`. Messages carry ids only. |
 | R-13 | ~~Prompt injection through stored task titles~~ | Covered at 2.8 by `evals/ask-injection.eval.ts`, a gate in CI. Malicious titles in tool results caused no writes, no proposals, and no hijacked replies; the model quoted them as data. Re-check at 3.6 when titles come from other members. |
 | R-14 **(owner)** | Parallel requests overshoot the cap. The security review showed one call can cost far more than "a few cents" (a PDF, or 6 Ask rounds). | Per-call cost is now bounded (PDF token budget; aborted calls charged). The real fix, to decide: reserve an estimated cost before each call with a definer function, or allow one in-flight call per user. |
 | R-15 | Anthropic model IDs and prices change. | `models.ts` and `pricing.ts` are the only places they appear; check the docs at 2.3 and 2.4 (rule 8). |
@@ -823,3 +824,4 @@ Items marked **(owner)** involve locked files that I can't and won't change.
 | R-28 | The current-workspace cookie is set by the client. | It's only a preference: RLS authorizes every read and write, and `getCurrentWorkspace` ignores a workspace the user isn't a member of. Add a test at 3.2. |
 | R-29 | Co-members can read each other's `display_name`. | Mention it in the privacy notes at 3.10. |
 | R-30 | A signed-out invitee's token passes through `/login?next=/invite/<token>` and the OAuth redirect, so it can appear in auth logs. | Accepted: a token works once, only for the invited email (D-16), and expires in 7 days. If needed, park it in a short-lived httpOnly cookie before login. |
+| R-31 | Every task change re-renders every open page in that workspace (`router.refresh()`, debounced by 250 ms). Cheap now; at the 3.7 scale a burst could cost many server renders. | Measure at 3.7. If it matters, send changed rows through RLS-checked reads instead of full refreshes. |

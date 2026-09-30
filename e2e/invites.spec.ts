@@ -1,33 +1,7 @@
-import { expect, test, type Browser, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 import { signInAsNewUser } from "./helpers/auth";
-
-async function newUser(browser: Browser, baseURL: string) {
-  const context = await browser.newContext({ baseURL });
-  const { email } = await signInAsNewUser(context, baseURL);
-  return { context, page: await context.newPage(), email };
-}
-
-/** Creates a workspace in the UI (it becomes current) and returns an invite link for `email`. */
-async function inviteLink(
-  page: Page,
-  workspace: string,
-  email: string,
-  role: "member" | "viewer",
-) {
-  await page.goto("/workspace");
-  await page.getByLabel("New workspace name").fill(workspace);
-  await page.getByRole("button", { name: "Create", exact: true }).click();
-  await expect(
-    page.getByRole("heading", { level: 1, name: workspace }),
-  ).toBeVisible();
-  await page.getByLabel("Invite email").fill(email);
-  await page.getByLabel("Invite role").selectOption(role);
-  await page.getByRole("button", { name: "Create invite link" }).click();
-  const link = page.getByLabel("Invite link");
-  await expect(link).toHaveValue(/\/invite\/[0-9a-f]{64}$/);
-  return new URL(await link.inputValue()).pathname;
-}
+import { inviteLink, newUser } from "./helpers/workspace";
 
 test("owner invites a viewer, who joins read-only, then is promoted to member", async ({
   browser,

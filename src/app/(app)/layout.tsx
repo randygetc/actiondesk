@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { AskPanel } from "@/components/ask/ask-panel";
+import { WorkspaceLive } from "@/components/realtime/workspace-live";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { Button } from "@/components/ui/button";
 import { askStream, confirmCreateTask } from "@/app/(app)/ask/actions";
@@ -25,6 +26,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           currentId={current.id}
           action={setWorkspace}
         />
+        {/* Keyed so switching workspaces rejoins the right channel. */}
+        <WorkspaceLive key={current.id} workspaceId={current.id} />
         <nav className="flex gap-4 text-sm">
           <Link href="/tasks">Tasks</Link>
           <Link href="/capture">Capture</Link>
