@@ -12,6 +12,10 @@ type FormAction = (
   formData: FormData,
 ) => Promise<ActionResult>;
 
+/** True when the action asked for a second-factor code (step 3.5). */
+const wantsCode = (state: ActionResult<unknown> | null) =>
+  !!state && !state.ok && !!state.fieldErrors?.code;
+
 function FormError({ state }: { state: ActionResult<unknown> | null }) {
   return state && !state.ok ? (
     <p role="alert" className="text-sm text-destructive">
@@ -160,10 +164,16 @@ export function MemberControls({
             <option value="viewer">Viewer</option>
           </select>
         </form>
-        <form action={removeAction}>
+        <form action={removeAction} className="flex items-center gap-2">
           <input type="hidden" name="userId" value={userId} />
+          {/* Asked for only when the session needs a second factor (step 3.5). */}
+          {wantsCode(removeState) ? <CodeInput /> : null}
           <Button type="submit" variant="ghost" size="sm">
-            {isSelf ? "Leave" : "Remove"}
+            {isSelf
+              ? "Leave"
+              : wantsCode(removeState)
+                ? "Confirm remove"
+                : "Remove"}
           </Button>
         </form>
       </div>
@@ -210,5 +220,55 @@ export function AcceptInviteForm({
       </Button>
       <FormError state={state} />
     </form>
+  );
+}
+
+function CodeInput() {
+  return (
+    <input
+      name="code"
+      aria-label="Authentication code"
+      inputMode="numeric"
+      autoComplete="one-time-code"
+      placeholder="123 456"
+      required
+      className={`${fieldClass} w-28`}
+    />
+  );
+}
+
+/** Owners only. A native <details> confirm, per the conventions. */
+export function DeleteWorkspaceForm({
+  name,
+  needsCode,
+  action,
+}: {
+  name: string;
+  needsCode: boolean;
+  action: FormAction;
+}) {
+  const [state, formAction, pending] = useActionState(action, null);
+  return (
+    <details className="rounded-md border border-destructive/40 p-3 text-sm">
+      <summary className="cursor-pointer text-destructive">
+        Delete workspace
+      </summary>
+      <form action={formAction} className="mt-3 flex flex-col gap-2">
+        <p>
+          This removes <strong>{name}</strong> and its projects and tasks for
+          every member.
+          {needsCode
+            ? " Enter a code from your authenticator app to confirm."
+            : ""}
+        </p>
+        <div className="flex items-center gap-2">
+          {needsCode || wantsCode(state) ? <CodeInput /> : null}
+          <Button type="submit" variant="destructive" disabled={pending}>
+            Delete {name}
+          </Button>
+        </div>
+        <FormError state={state} />
+      </form>
+    </details>
   );
 }

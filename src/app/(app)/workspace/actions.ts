@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import type { ActionResult } from "@/lib/action-result";
+import { MFA_MESSAGES, stepUp } from "@/lib/auth/mfa";
 import { log } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -13,6 +14,7 @@ import {
   inviteSchema,
   inviteTokenSchema,
   memberRoleSchema,
+  totpCodeSchema,
   workspaceNameSchema,
 } from "@/lib/validation/workspace";
 import {
@@ -224,6 +226,21 @@ export async function removeMember(
   if (!user) return signedOut;
   const { current, all } = await currentWorkspace(supabase, user.id);
 
+  // Removing someone else needs a second factor (step 3.5); RLS enforces it too.
+  if (memberId.data !== user.id) {
+    const code = totpCodeSchema.safeParse(formData.get("code") ?? "");
+    const step = await stepUp(
+      supabase,
+      code.success ? code.data || null : null,
+    );
+    if (!step.ok)
+      return {
+        ok: false,
+        error: step.error,
+        fieldErrors: step.needsCode ? { code: [step.error] } : undefined,
+      };
+  }
+
   const { data, error } = await supabase
     .from("workspace_members")
     .delete()
@@ -279,6 +296,50 @@ export async function acceptInvite(
   }
   log.info("invite.accepted", { userId: user.id, workspaceId });
   await setWorkspaceCookie(workspaceId);
+  refresh();
+  redirect("/tasks");
+}
+
+/**
+ * Deletes the current workspace (soft delete, D-17) for every member. Owner
+ * and a second factor only: delete_workspace() checks both (step 3.5).
+ */
+export async function deleteWorkspace(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const { supabase, user } = await getUserClient();
+  if (!user) return signedOut;
+  const { current, all } = await currentWorkspace(supabase, user.id);
+
+  const code = totpCodeSchema.safeParse(formData.get("code") ?? "");
+  const step = await stepUp(supabase, code.success ? code.data || null : null);
+  if (!step.ok)
+    return {
+      ok: false,
+      error: step.error,
+      fieldErrors: step.needsCode ? { code: [step.error] } : undefined,
+    };
+
+  const { error } = await supabase.rpc("delete_workspace", {
+    p_workspace_id: current.id,
+  });
+  if (error) {
+    if (error.message === "last_workspace")
+      return { ok: false, error: "You can't delete your only workspace." };
+    if (error.message === "mfa_required")
+      return { ok: false, error: MFA_MESSAGES.needCode };
+    if (error.code === "42501")
+      return { ok: false, error: "Only an owner can delete a workspace." };
+    log.error("workspace.delete_failed", {
+      userId: user.id,
+      code: error.code ?? null,
+    });
+    return failed;
+  }
+  log.info("workspace.deleted", { userId: user.id, workspaceId: current.id });
+  const next = all.find((w) => w.id !== current.id);
+  if (next) await setWorkspaceCookie(next.id);
   refresh();
   redirect("/tasks");
 }

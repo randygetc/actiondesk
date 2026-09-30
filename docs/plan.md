@@ -2,7 +2,7 @@
 
 Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.md.
 
-- **Last updated:** 2026-09-30 (step 3.4: realtime)
+- **Last updated:** 2026-09-30 (step 3.5: MFA)
 - **Sources:** CLAUDE.md, docs/architecture.md, docs/adr/0001–0005, docs/KICKOFF.md, guardrails/, .claude/
 - **Scope:** Phases 1 and 2 are done. Phase 3 is detailed in §4 (3.1).
 - **Needs your decision:** the owner items in §7 (risks and gaps in the guardrails). All §6 decisions are made.
@@ -33,8 +33,9 @@ Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.
 | 3.1 | Phase 3 plan | done (PR #22) |
 | 3.2 | Migrate to workspaces | done (PRs #23, #24) |
 | 3.3 | Invites | done (PR #25) |
-| 3.4 | Realtime | PR open on `phase3/realtime`: private Broadcast per workspace (RLS on realtime.messages), refresh-on-change (no duplicates), catch-up after reconnect |
-| 3.5–3.12 | Workspaces, jobs, prod | detailed in §4; not started |
+| 3.4 | Realtime | done (PR #26) |
+| 3.5 | MFA | PR open on `phase3/mfa`: TOTP in Settings → Security; removing a member and deleting a workspace need aal2 (RLS / delete_workspace); step-up prompt |
+| 3.6–3.12 | Workspaces, jobs, prod | detailed in §4; not started |
 
 ### 0.1 Phase 1 summary (2026-09-30)
 
@@ -825,3 +826,4 @@ Items marked **(owner)** involve locked files that I can't and won't change.
 | R-29 | Co-members can read each other's `display_name`. | Mention it in the privacy notes at 3.10. |
 | R-30 | A signed-out invitee's token passes through `/login?next=/invite/<token>` and the OAuth redirect, so it can appear in auth logs. | Accepted: a token works once, only for the invited email (D-16), and expires in 7 days. If needed, park it in a short-lived httpOnly cookie before login. |
 | R-31 | Every task change re-renders every open page in that workspace (`router.refresh()`, debounced by 250 ms). Cheap now; at the 3.7 scale a burst could cost many server renders. | Measure at 3.7. If it matters, send changed rows through RLS-checked reads instead of full refreshes. |
+| R-32 | TOTP is enabled in `supabase/config.toml` for local and CI only. In prod it's a dashboard setting. | Add to the 3.10 deploy runbook: enable TOTP (enroll + verify) in the prod project before shipping, or owners can't delete workspaces or remove members. |
