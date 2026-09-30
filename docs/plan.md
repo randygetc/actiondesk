@@ -2,9 +2,9 @@
 
 Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.md.
 
-- **Last updated:** 2026-09-30 (step 2.8: injection hardening)
+- **Last updated:** 2026-09-30 (Phase 2 done)
 - **Sources:** CLAUDE.md, docs/architecture.md, docs/adr/0001–0005, docs/KICKOFF.md, guardrails/, .claude/
-- **Scope:** Phases 1 and 2 are in full detail. Phase 3 is outlined and gets detailed in step 3.1.
+- **Scope:** Phases 1 and 2 are done and in full detail. Phase 3 is outlined and gets detailed in step 3.1.
 - **Needs your decision:** the owner items in §7 (risks and gaps in the guardrails). All §6 decisions are made.
 
 ## 0. Status
@@ -28,7 +28,8 @@ Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.
 | 2.5 | Ask ActionDesk | done (PR #16) |
 | 2.6 | Cost controls | done (PR #17) |
 | 2.7 | Attachments | done (PR #18) |
-| 2.8 | Injection hardening | PR open on `phase2/injection`: Ask injection eval (gate); security review, 8 findings fixed, 5 deferred (§7) |
+| 2.8 | Injection hardening | done (PR #19): Ask injection eval (gate); security review, 8 findings fixed, 5 deferred (§7) |
+| P2 | Phase 2 checkpoint | done; summary in §0.2. Owner: friction debrief in docs/learnings.md |
 | 3.x | Workspaces, jobs, prod | outline only |
 
 ### 0.1 Phase 1 summary (2026-09-30)
@@ -62,6 +63,60 @@ Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.
 - R-3 still stands; client components must stay in `src/components/`.
 - R-9: no foreign-key or `due_at` indexes until measured at 3.7.
 - The 2.x steps are outline only; step 2.1 details them.
+
+### 0.2 Phase 2 summary (2026-09-30)
+
+**Built:**
+- **Capture** (`/capture`): paste notes or upload a PDF, .docx, .txt or .vtt/.srt file.
+  - Tasks stream into a review list: edit, reject or accept each; low-confidence rows are flagged.
+  - Only accepted rows are saved, re-validated with the task form's schema.
+  - Uploaded files are deleted after review.
+- **Ask ActionDesk:** a chat panel with `search_tasks`, `list_overdue`, `get_project_summary` and a proposal-only `create_task` (Confirm to save). Tools run as the signed-in user.
+- **Cost controls:**
+  - `llm_usage` logs every call, aborted ones included.
+  - A per-user cap over a rolling 24 hours ($1 by default).
+  - Prompt caching (−28% extraction cost).
+  - An admin usage page (admins are added by SQL).
+- **Evals:**
+  - 22 extraction cases: 98% on claude-sonnet-5-5 at $0.006 per case. They include 3 attachment cases and 3 injection cases.
+  - The Ask injection eval, a gate in CI.
+  - Both replay recordings in CI, so no key is needed.
+- **Database:** 5 migrations with pgTAP 005–009, adding `llm_usage`, task provenance, `app_admins`, `attachments`, the storage bucket and policies, and the review fixes.
+- **Tests:** 235 unit, 11 db (including user B vs user A through every Ask tool), and 27 e2e.
+
+**Checkpoint (KICKOFF):**
+- Paste notes and get reviewed tasks saved with correct dates in your time zone: e2e, plus live checks.
+- The eval score is recorded and CI runs the evals in recorded mode.
+- Ask can't see other users' data: a db test through each tool and through the full loop.
+- Usage is logged and the cap enforced: pgTAP, db tests, e2e, and a live abort check.
+- Attachments produce tasks; oversized, wrong-type, zip-bomb and hidden-instruction files are handled safely: unit tests, e2e and evals.
+
+**What changed from the plan:**
+- **Models:** extraction and Ask run on claude-sonnet-5-5 (owner decision at 2.4). Opus 5.5 and Haiku 4.5 were compared, with the results in docs/learnings.md.
+- **Eval cases** were drafted by Claude at the owner's request, not written by the owner (KICKOFF 2.2). The owner still needs to review `expected.json`.
+- **Title matching** in the scorer changed from Jaccard ≥ 0.5 to overlap with the shorter title ≥ 0.6 (2.3).
+- **Due dates** come from the model as local date + time, not ISO with an offset (D-20).
+- **Streaming (the 2.1 spike, result d):** `finally` isn't reliable when the client disconnects. Usage is recorded through `usageRun()` and `after()` (2.8).
+- **The daily cap** is a rolling 24-hour window instead of local midnight (review #2).
+- **New Supabase functions:** `llm_spend_recent`, `llm_usage_report`. `llm_spend_today` was dropped.
+- **Bugs found by live checks,** which unit tests missed:
+  - Strict tool schemas reject `enum` on a nullable type.
+  - Dated model ids broke pricing.
+  - The proxy's 10 MB body limit truncated uploads.
+  - Aborted streams were never logged.
+
+**Open issues carried into Phase 3:**
+- **Owner:**
+  - R-14: parallel cap overshoot. Reserve spend before each call, or allow one call in flight per user.
+  - R-22: Vercel's 4.5 MB body limit. An ADR for signed-URL uploads, or a 4 MB limit. **Decide before deploy.**
+  - R-23: forged usage rows. An ADR for a server-only write path.
+  - R-1 and R-2 from Phase 1.
+- **Carried:**
+  - R-18: check streaming buffering on Vercel.
+  - R-20: a cron job to clean up leftover attachments.
+  - R-24: the global body limit.
+  - R-26: data framing for member-written context once workspaces exist.
+  - The three ambiguous project labels in the eval.
 
 ## 1. Conventions this plan assumes
 
