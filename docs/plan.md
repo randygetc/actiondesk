@@ -2,9 +2,9 @@
 
 Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.md.
 
-- **Last updated:** 2026-09-30 (Phase 1 done)
+- **Last updated:** 2026-09-30 (step 2.1: Phase 2 detailed, streaming spike)
 - **Sources:** CLAUDE.md, docs/architecture.md, docs/adr/0001–0005, docs/KICKOFF.md, guardrails/, .claude/
-- **Scope:** Phase 1 is in full detail. Phases 2 and 3 are outlined and get detailed in steps 2.1 and 3.1.
+- **Scope:** Phases 1 and 2 are in full detail. Phase 3 is outlined and gets detailed in step 3.1.
 - **Needs your decision:** the owner items in §7 (risks and gaps in the guardrails). All §6 decisions are made.
 
 ## 0. Status
@@ -21,7 +21,8 @@ Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.
 | 1.8 | Timezone edge cases | done (PR #9); found spring-forward drift, fixed by storing the local time in the rule (owner decision) |
 | 1.9 | CI | done (PR #10); `ci` is a required check on `main` |
 | P1 | Phase 1 checkpoint | done; summary in §0.1. Owner: friction debrief in docs/learnings.md |
-| 2.x | LLM features | outline only |
+| 2.1 | Phase 2 plan + streaming spike | PR open on `phase2/plan`; spike passed (§3.1), no ADR; D-19–D-21 decided |
+| 2.2–2.8 | LLM features | detailed in §3.9; not started |
 | 3.x | Workspaces, jobs, prod | outline only |
 
 ### 0.1 Phase 1 summary (2026-09-30)
@@ -315,78 +316,234 @@ Acceptance:
 
 ---
 
-## 3. Phase 2 — LLM features (outline; detailed at 2.1)
+## 3. Phase 2 — LLM features (detailed at 2.1, 2026-09-30)
 
-### Data model additions
+Goal (KICKOFF): notes → tasks extraction with a review screen, an "Ask ActionDesk" assistant that uses tools, evals, and cost controls. Owner decisions for this phase: D-11 to D-15 and D-19 to D-21 (§6).
 
-- **`llm_usage`**:
-  - columns: `id`, `user_id` (→ profiles), `feature` (`extract` | `ask` | `digest`), `model`, `input_tokens`, `output_tokens`, `cached_tokens`, `cost_usd numeric(10,6)`, `outcome` (`ok` | `invalid_output` | `error` | `capped`), `latency_ms`, `created_at`.
-  - It is append-only: no update or delete policies, so a user can't erase usage to reset their cap.
-  - Inserts go through a `log_llm_usage(...)` function rather than an open insert policy, so the browser can't write rows directly (D-12).
-- **`tasks`** gains:
-  - `source` (`manual` | `extraction` | `ask`), default `manual`;
-  - `source_quote text null` (≤ 500 chars; displayed as plain text only);
-  - `assignee_text text null` for the free-text owner from extraction (D-13).
-- **`attachments`**: `id`, `owner_id`, `storage_path`, `mime_type`, `size_bytes`, `created_at`. Storage bucket `attachments` is private, with the object path `{owner_id}/{attachment_id}.{ext}`. `storage.objects` policies match the table: the first path segment must equal `auth.uid()`.
-- **Admin role.** The usage page needs one (D-11). The recommended form is an `app_admins(user_id)` table, readable only by its own row, plus an `is_app_admin()` helper used in an extra `llm_usage` select policy. This keeps the admin page on the user client with no service role.
-- **Daily cap:**
-  - The default comes from the env variable `LLM_DAILY_CAP_USD`.
-  - It is checked in `src/lib/llm/usage.ts` before every call by summing today's `llm_usage` rows in the user's timezone.
-  - In Phase 3 it moves to per-workspace settings.
+### 3.1 Streaming (spike result, 2.1)
 
-### Routes and modules
+Server Actions can stream, so R5 holds and no ADR is needed. The spike (throwaway branch, deleted) ran against `next dev` and a production build (`next start`); both gave the same results:
 
-- `(app)/capture/page.tsx`: paste text or upload a file.
-- The review screen is client state on the same route. Extracted drafts are not persisted; only accepted tasks are saved (D-14).
-- `(app)/capture/actions.ts`: `extractTasks`, `saveReviewedTasks`, `uploadAttachment`.
-- The Ask panel is a slide-over in the `(app)` layout. Its actions are `askStream` and `confirmCreateTask`.
-- `(app)/admin/usage/page.tsx`: gated by `is_app_admin()` in RLS, with a UI check only for a clearer error.
-- `src/lib/llm/`:
-  - `client.ts`: the only SDK import;
-  - `models.ts`: model IDs, verified against Anthropic docs at 2.3 (rule 8);
-  - `extract.ts`, `ask.ts`, `tools/*.ts`;
-  - `pricing.ts`, `usage.ts`, `prompts/*`.
-- `src/lib/validation/extraction.ts` holds `ExtractedTask`: title, owner, due_at (ISO with offset), project_id (uuid | null), confidence 0–1, source_quote. The `project_id` must also be in the user's project list, which is checked after parsing.
-- `evals/extraction/<case>/{input.txt|input.pdf, expected.json, recorded.json}` and `scripts/eval.ts`. The eval runs with `react-server` conditions, or through Vitest, because `server-only` blocks plain Node (R-6).
-
-### Streaming
-
-Streaming must stay inside Server Actions to satisfy R5. The plan is a Server Action that returns an async iterable or `ReadableStream` (React 19 Flight supports this). It will be spiked at 2.1. If that doesn't work, a streaming route handler is needed, and that step stops for `/propose-adr` because route handlers would be writing to `llm_usage` outside a Server Action (R-5).
-
-### Where LLM output crosses a trust boundary (to expand at 2.1)
-
-1. **Pasted text and files → prompt.**
-   - Wrap them in delimited tags, with a system prompt saying the content is data.
-   - Hidden text (white-on-white in PDFs) is still text; nothing in it is trusted.
-2. **Extraction output → review UI.**
-   - Parse with Zod; retry once with the validation error, then fail gracefully.
-   - Render as text only, never `dangerouslySetInnerHTML` or markdown-to-HTML.
-3. **Review UI → DB.**
-   - `saveReviewedTasks` re-validates with the same task schema as manual creation.
-   - `owner_id` comes from `getUser()` and the project is checked by the FK and RLS.
-4. **Ask tool arguments → queries.**
-   - Zod-parse every tool input; queries go through the user client (ADR-0003).
-   - Tool results that include task titles are themselves untrusted content fed back to the model.
-5. **Ask `create_task` → DB.**
-   - The tool returns a proposal only.
-   - The UI shows it; the click calls `confirmCreateTask`, which re-validates. The model's args are never executed directly.
-6. **Assistant text → chat UI.** Plain text, or a sanitizing renderer that doesn't allow raw HTML (D-15).
-7. **Usage numbers → cap.** Token counts come from the API response, not from model text.
-
-### Step acceptance (outline)
-
-| Step | Must be true |
+| Check | Result |
 |---|---|
-| 2.1 | Phase 2 detailed here; streaming spike result recorded; ADR proposed if needed |
-| 2.2 | 15–20 owner-written cases; `npm run eval` prints a per-case table and overall score; recorded mode is deterministic and runs in CI with no key |
-| 2.3 | Extraction uses strict tool-use schema; invalid output → 1 retry → graceful error; low-confidence items flagged; live eval score in docs/learnings.md |
-| 2.4 | Score, latency and cost per case for a Haiku-class and a Sonnet-class model (IDs from docs); a recommendation |
-| 2.5 | Tools `search_tasks`, `list_overdue`, `get_project_summary`, `create_task` (proposal only); tool calls shown in UI; **Vitest + pgTAP test: user B asking about user A's project gets nothing** |
-| 2.6 | Every call is logged; prompt caching on system prompt and tools; cap enforced with a friendly error; admin page gated by RLS |
-| 2.7 | Private bucket; the 10 MB limit and type checks are server-side, by magic bytes and not just extension; 3 attachment eval cases including the hidden-text PDF |
-| 2.8 | Injection cases run through Extract and Ask; no tool executes without a click; security-reviewer report attached; `/phase-done` |
+| a. Incremental delivery | Yes. The action resolves in ~120 ms, then events arrive 300 ms apart. It works for both an async generator and a `ReadableStream` return. |
+| b. Auth during the stream | `getUser()` works before the first event. A write *after* the last event runs as the user: `owner_id default auth.uid()` resolved and RLS passed. |
+| c. Blocking | No. A second action during a 9 s stream returned in ~100 ms. |
+| d. Abort | Navigating away stops the generator and runs its `finally`. Code after the loop does **not** run. The server logs `The destination stream closed early` (harmless, but filter it in Sentry at 3.x). |
 
-Dependencies to ask about in Phase 2: `@anthropic-ai/sdk`, a `.docx` extractor (for example `mammoth`), a VTT/SRT parser (may be hand-written), and a PDF text fallback if Claude's native PDF input isn't used.
+What follows from this:
+- **Pattern:** the action authenticates, validates input, then `return`s an async generator. The client reads it with `for await`.
+- **Usage logging goes in `finally`**, never after the loop, so aborted calls are still logged. On abort, the Anthropic request is cancelled with an `AbortSignal`.
+- **Not tested locally:** buffering on Vercel. Check it on the first preview deploy (3.x) with the extraction stream. If Vercel buffers, that's an ADR, not a workaround.
+
+### 3.2 Data model
+
+All through `/migrate`: a new migration file, RLS in the same file, table grants, and pgTAP tests for owner, other user and anon per policy.
+
+**`llm_usage`** (2.3, D-19)
+- Columns:
+  - `id`, `user_id` (→ profiles, `on delete cascade`), `feature` (`extract` | `ask`; `digest` is added in Phase 3);
+  - `model`, `input_tokens`, `output_tokens`, `cached_tokens` (all ints ≥ 0);
+  - `cost_usd numeric(10,6)`, `outcome` (`ok` | `invalid_output` | `error` | `capped` | `aborted`), `latency_ms`, `request_id text null`, `created_at`.
+- Policies and grants:
+  - `select` own rows only. No insert, update or delete for `authenticated`, and nothing for `anon`.
+  - Append-only, so a user can't erase usage to reset their cap.
+- Functions:
+  - `log_llm_usage(...)`: `security definer`, `set search_path = ''`. It sets `user_id = auth.uid()` itself and never takes it as an argument. It raises if unauthenticated. Check constraints reject negative or absurd values.
+  - `llm_spend_today(tz text)`: the sum of `cost_usd` since local midnight in `tz`, for `auth.uid()`. Used by the cap (2.6).
+- pgTAP:
+  - A user can read their own rows and not another user's.
+  - Direct insert is denied.
+  - `log_llm_usage` can't write another user's row.
+  - Anon is denied.
+
+**`tasks` additions** (2.3)
+- `source` enum (`manual` | `extraction` | `ask`), default `manual`.
+- `source_quote text null`, check ≤ 500 chars. Displayed as plain text only.
+- `assignee_text text null`, check ≤ 200 chars (D-13).
+- Insert grants cover the new columns; `source_quote` and `source` aren't updatable.
+- `src/lib/validation/task.ts` mirrors the checks.
+
+**`app_admins`** (2.6, D-11)
+- `app_admins(user_id pk → profiles)`. Each user can read only their own row, with no write grants; you insert your row by SQL.
+- `is_app_admin()` is a `security definer` helper.
+- An extra `llm_usage` select policy: `using (is_app_admin())`.
+
+**`attachments`** (2.7, D-21)
+- Columns: `id`, `owner_id default auth.uid()`, `storage_path`, `mime_type`, `size_bytes`, `created_at`. Select, insert and delete for the owner only.
+- A private bucket `attachments`. `storage.objects` policies require `(storage.foldername(name))[1] = auth.uid()::text` for select, insert and delete.
+- **Deletion:** the row and the object are deleted when the review is saved or discarded. Leftovers (a closed tab) go to a Phase 3 cron job (R-20).
+
+### 3.3 `src/lib/llm/`
+
+Every file imports `server-only`. `client.ts` is the only SDK import (R2).
+
+| File | Responsibility |
+|---|---|
+| `client.ts` | Creates the SDK client from `ANTHROPIC_API_KEY`. Exports a narrow `LlmClient` interface (stream a message, get the final message) so tests and evals inject fakes or recordings. |
+| `models.ts` | Model IDs per feature. Checked against Anthropic docs (claude-api skill) at 2.3 and again at 2.4, never guessed (rule 8, R-15). |
+| `pricing.ts` | Per-model input, output and cache prices from the docs, with the date checked. `costUsd(model, usage)`. |
+| `usage.ts` | `withUsage(feature, run)`: checks the cap (from 2.6), times the call, and **in `finally`** calls `log_llm_usage` with token counts from the API's `usage` field only (never from model text). Logs ids and counts only (rule 12). |
+| `extract.ts` | The extraction pipeline (below). An async generator of `ExtractEvent`. |
+| `ask.ts` | The Ask loop (below). An async generator of `AskEvent`. |
+| `tools/*.ts` | One file per Ask tool: a Zod input schema and a `run(supabase, input)` that takes the request's user-scoped client. |
+| `prompts/*.ts` | System prompts as versioned constants (`EXTRACT_PROMPT_V1`, …). The version is logged with usage. |
+
+**Extraction pipeline** (`extract.ts`)
+1. **Inputs:** the note text (or a PDF document block), `now`, the profile timezone, the user's non-archived projects as `{id, name}`, and `includeOthers` (D-13).
+2. **Prompt:** the system prompt says the content inside `<note>` tags is data to extract from, never instructions. The user message holds the date and timezone, the project list and the note.
+3. **Tool:** the model calls **`add_task` once per task**, with a strict JSON schema:
+   - `title`, `assignee`;
+   - `due_date` (YYYY-MM-DD, optional) and `due_time` (HH:mm, optional), in the user's local time (D-20);
+   - `project_id` (uuid | null), `confidence` (0–1), `source_quote` (≤ 500).
+   - Plain text replies are ignored.
+4. **Per block:** as each `tool_use` block completes, it's Zod-parsed (`ExtractedTask`) and a valid one is yielded immediately, so the review screen fills while the model is still writing.
+5. **Retry once:** invalid blocks go back in one follow-up turn, as `tool_result` with `is_error` and the Zod message. Blocks still invalid are dropped and counted (`invalid_output`).
+6. **Post-checks:**
+   - A `project_id` not in the user's list becomes null.
+   - Exact duplicate titles are merged.
+   - `due_date`/`due_time` are converted with `src/lib/time` (END_OF_DAY, the spring-forward gap rule).
+
+**Ask loop** (`ask.ts`)
+- **Input:** the chat history (text turns only) and the new question.
+- **Loop:** at most 5 tool rounds per question, then a forced final answer.
+- **Events:**
+  - `text` (a delta);
+  - `tool_call` (name and a short argument summary, for the UI chip);
+  - `proposal` (a validated `create_task` proposal with an id);
+  - `done` or `error`.
+- **Tool results** are JSON of trimmed fields, wrapped as data. Task titles are other people's text (R-13).
+
+**Tools** (2.5, ADR-0003)
+
+| Tool | Input (Zod) | Query (user client, so RLS applies) |
+|---|---|---|
+| `search_tasks` | `query` ≤ 200, `status?`, `project_id?` | `tasks` with `ilike` on the title, limit 20 |
+| `list_overdue` | none | `due_at < now`, not done, limit 50, using the injected `now` |
+| `get_project_summary` | `project_id` uuid | the project row plus task counts by status. Not found or invisible gives the same answer |
+| `create_task` | the same fields as the task form | **Writes nothing.** Returns a `proposal` event. The user's click calls `confirmCreateTask` |
+
+### 3.4 Validation (`src/lib/validation/`)
+
+- **`extraction.ts`:** `ExtractedTask` and `ReviewedTask` (what the review screen sends back). `toTaskInput(reviewed, tz)` maps a reviewed task onto the existing task create schema, so saved tasks pass exactly the checks that manual ones do.
+- **`ask.ts`:**
+  - the tool input schemas;
+  - `ChatTurn` = `{role: "user" | "assistant", text ≤ 4000}`, at most 20 turns;
+  - `CreateTaskProposal`.
+- **`attachment.ts`:** size and type rules, and the magic-byte signatures.
+
+### 3.5 Routes, actions and UI
+
+| Path | What |
+|---|---|
+| `(app)/capture/page.tsx` | Paste box and file picker. The review list is client state only (D-14). |
+| `(app)/capture/actions.ts` | `extractTasks(text \| attachmentId, includeOthers)` streams `ExtractEvent`s. `saveReviewedTasks(rows)` re-validates every row, inserts with `source = 'extraction'`, and deletes the attachment. `uploadAttachment(formData)`, `discardAttachment(id)`. |
+| `src/components/capture/` | `review-list.tsx`: per row edit / reject / accept, a low-confidence flag (< 0.6), and `source_quote` shown as text. "Save accepted" posts once. |
+| `src/components/ask/` | A slide-over panel in the `(app)` layout. Plain text with line breaks (D-15), tool chips, and a proposal card with Confirm and Dismiss. |
+| `(app)/ask/actions.ts` | `askStream(history, question)` streams `AskEvent`s. `confirmCreateTask(proposal)` re-validates, then creates the task as the user with `source = 'ask'`. |
+| `(app)/admin/usage/page.tsx` | Usage by day and feature, with a total cost. RLS gates the data (D-11); a UI check only gives a clearer "not an admin" page. |
+
+**Every action** calls `getUser()`, validates with Zod, and returns an `ActionResult`, or an event stream whose first event is an `error` on failure.
+
+**Cap-exceeded errors** read: "You've reached today's AI limit. It resets at midnight."
+
+### 3.6 Attachments (2.7)
+
+- **Size:** ≤ 10 MB, checked on the server from the uploaded bytes, not a header.
+- **Type** is decided by magic bytes. The filename and the browser's MIME type are ignored:
+  - PDF: `%PDF-`;
+  - .docx: `PK\x03\x04` plus a `word/document.xml` entry;
+  - .txt/.vtt/.srt: valid UTF-8 with no NUL bytes. VTT also starts with `WEBVTT`.
+- **Text extraction:**
+  - PDFs go to Claude as a `document` block, so hidden text is still just text in `<note>`.
+  - .docx uses `mammoth`, a dependency to ask about at 2.7.
+  - VTT/SRT use a small parser with unit tests, which strips timestamps and keeps speaker names.
+- **Storage path:** `{uid}/{attachment_id}.{ext}`, built on the server, with `ext` taken from the detected type.
+
+### 3.7 Evals (2.2)
+
+- **Cases:** `evals/extraction/<case>/`, 15–20 of them, written by the owner (KICKOFF 2.2), plus 3 attachment cases at 2.7. Each case has:
+  - `case.json`: `{now, timezone, projects: [{id, name}], includeOthers}`;
+  - `input.txt` (or `input.pdf`);
+  - `expected.json`: `[{title, assignee, due_at (UTC ISO) | null, project_id | null}]`;
+  - `recorded.json`: the raw API responses from the last live run.
+- **Runner:** `evals/extraction.eval.ts` in the existing Vitest `eval` project (R-6).
+  - **Recorded mode (default):** replays `recorded.json` through the real `extract.ts` via a fake `LlmClient`. Deterministic, with no key.
+  - **Live mode** (`EVAL_LIVE=1 npm run eval`): calls the API, rewrites `recorded.json`, and logs usage.
+- **Matching:** greedy one-to-one pairing of extracted to expected tasks by title similarity (normalized token overlap ≥ 0.5).
+- **Scores per case:**
+  - title (matched pairs);
+  - assignee (case-insensitive);
+  - due (exact UTC instant after conversion);
+  - project (exact);
+  - precision and recall.
+  - A case expecting no tasks scores 1 only if nothing is extracted.
+- **Output:** a per-case table plus an overall score (the mean F1 of the fields). Scores go into `docs/learnings.md` per iteration.
+- **CI:** `ci.yml` gains an `npm run eval` step (recorded mode) at 2.2.
+
+### 3.8 Where LLM output crosses a trust boundary
+
+| # | Boundary | Control | Test |
+|---|---|---|---|
+| 1 | Pasted text and files → prompt | `<note>` tags; the system prompt says it's data; hidden PDF text gets the same treatment | Injection eval cases (2.2, 2.7) |
+| 2 | Extraction output → review UI | Strict tool schema, Zod per block, one retry, then drop and count; rendered as text only, never `dangerouslySetInnerHTML` | Unit tests with malformed recorded responses |
+| 3 | Review UI → DB | `saveReviewedTasks` re-validates with the task schema; `owner_id` from `getUser()`; project checked by the FK and RLS | Unit + e2e |
+| 4 | Ask tool arguments → queries | Zod per tool; user-scoped client only (ADR-0003); fixed query shapes, no model-built filters | **db test: user B's client on user A's project gets nothing** (2.5) |
+| 5 | Ask `create_task` → DB | Proposal only; `confirmCreateTask` re-validates; no write without a click | Unit: the tool never touches the DB. e2e: nothing saved until Confirm |
+| 6 | Assistant text → chat UI | Plain text with line breaks (D-15) | e2e: `<b>` in a reply renders literally |
+| 7 | Usage numbers → cap | Tokens from the API's `usage` field; cost from `pricing.ts` | Unit |
+| 8 | Chat history from the client → model | Text turns only, length and count capped; tool results never accepted from the client (tools re-run) | Unit on `ChatTurn` |
+| 9 | Proposal from the client → `confirmCreateTask` | Treated as user input: same schema as the task form; `owner_id` from `getUser()` | Unit |
+| 10 | DB text in tool results → model | Wrapped as data; write tools stay proposal-only (R-13) | Injection case at 2.8 |
+| 11 | Upload → storage and parser | Magic-byte type, server-side size, server-built path, private bucket | Unit + e2e (oversized, wrong type) |
+
+### 3.9 Steps and acceptance
+
+KICKOFF order, with three changes: usage logging and the `tasks` columns move to 2.3 (D-19), and CI runs evals from 2.2.
+
+**2.2 Evals first** (friction exercise C; the owner writes the cases)
+- [ ] 15–20 cases covering KICKOFF's hard cases (relative dates, none, duplicates, others' tasks, Taglish, injection).
+- [ ] `npm run eval` prints a per-case table and an overall score. Recorded mode is deterministic, with no key.
+- [ ] The runner is tested against a hand-made recording: a perfect case scores 1, and a wrong date lowers the score.
+- [ ] `ci.yml` runs the eval.
+
+**2.3 Extraction** (ask first: `@anthropic-ai/sdk`)
+- [ ] Migrations: `llm_usage` + `log_llm_usage` + `llm_spend_today`, and the `tasks` columns, with pgTAP.
+- [ ] `models.ts` and `pricing.ts` checked against the docs, with the date recorded.
+- [ ] Per-block validation, one retry, graceful failure. Every call is logged, aborted ones included.
+- [ ] The review screen streams rows, flags low confidence, and supports edit / reject / accept. Only accepted rows are saved.
+- [ ] e2e with a fake `LlmClient` (the env `LLM_FAKE=1`, honored only when `NODE_ENV !== 'production'`): paste → rows appear → accept two → saved with the right `due_at` in the profile timezone.
+- [ ] A live eval score is recorded in `docs/learnings.md`.
+
+**2.4 Model comparison** (friction exercise D)
+- [ ] A live eval with a Haiku-class and a Sonnet-class model (IDs from the docs): score, p50 latency and cost per case.
+- [ ] A recommendation in `docs/learnings.md`; `models.ts` updated.
+
+**2.5 Ask ActionDesk**
+- [ ] The four tools above, a streaming panel, and tool chips.
+- [ ] **A db test where user B's client calls each tool against user A's project and gets nothing.** pgTAP for any new definer function.
+- [ ] `create_task` saves nothing until Confirm (unit + e2e).
+- [ ] Friction exercise E noted: did the tools use the user client unprompted?
+
+**2.6 Cost controls**
+- [ ] The cap: `LLM_DAILY_CAP_USD`, checked with `llm_spend_today` before each call, with a friendly error and outcome `capped`. R-14: accept a small overshoot (decided here).
+- [ ] Prompt caching on the system prompt and tools. `cached_tokens` > 0 on a second call, or R-19 recorded with the measured prompt size.
+- [ ] `app_admins` + `is_app_admin()`. The admin page is gated by RLS; a non-admin sees no rows (pgTAP).
+
+**2.7 Attachments** (ask first: `mammoth`)
+- [ ] The bucket and table with policies, and a pgTAP/db test showing user B can't read user A's object.
+- [ ] Oversized, wrong-type (renamed .exe → .pdf) and empty files are rejected on the server (unit + e2e).
+- [ ] The file is deleted after save or discard.
+- [ ] 3 attachment eval cases, including the hidden white-text PDF.
+
+**2.8 Injection hardening**
+- [ ] The injection cases run through Extract and Ask. No instruction from content is followed, and no write happens without a click.
+- [ ] A security-reviewer report on Phase 2 is attached to the PR.
+- [ ] `/phase-done`.
+
+**Dependencies (ask when needed):** `@anthropic-ai/sdk` (2.3), `mammoth` (2.7). No PDF library, since PDFs go to Claude natively. The VTT/SRT parser is hand-written.
+
+**Env (names only in `.env.local.example`):** `ANTHROPIC_API_KEY` (already listed), `LLM_DAILY_CAP_USD` (2.6), `LLM_FAKE` (dev and e2e only; ignored in production).
 
 ---
 
@@ -490,6 +647,9 @@ On 2026-09-29 the owner accepted every recommendation, and chose to cut the 1.6 
 | D-16 | Invite acceptance mechanism | `accept_invite(token)` definer function; the token is hashed at rest; the email must match | Accepted |
 | D-17 | Soft or hard delete of workspaces | Soft delete (`deleted_at`) with a purge job later. Hard delete behind aal2 is acceptable if you prefer it. | Accepted |
 | D-18 | Invites: send an email, or share a link | Share a link in 3.3; email once the provider is chosen in 3.6 | Accepted |
+| D-19 | When `llm_usage` logging starts (KICKOFF puts it at 2.6) | 2.3, so every live call is logged; 2.6 keeps the cap, caching and admin page | Accepted (2026-09-30) |
+| D-20 | Due-date format from extraction | Local `due_date` + optional `due_time`, converted by `src/lib/time` (not ISO with offset, which models get wrong across DST) | Accepted (2026-09-30) |
+| D-21 | Retention of uploaded files | Delete when the review is saved or discarded; Phase 3 cron removes leftovers; only `source_quote` stays | Accepted (2026-09-30) |
 
 ---
 
@@ -503,7 +663,7 @@ Items marked **(owner)** involve locked files that I can't and won't change.
 | R-2 **(owner)** | architecture.md §6 lists "ESLint `no-restricted-imports`" for R2 and R3, but there is no ESLint config, and one created at 1.3 would be editable by Claude. dependency-cruiser is the real enforcement. | Either add the ESLint config to the locked paths after 1.3, or drop that row from §6. |
 | R-3 **(owner)** | dependency-cruiser R6 only covers `src/components/`. A `"use client"` file under `src/app/` that imports `src/lib/llm/` is caught only by the `server-only` build error, and only for files that import `server-only` directly. | Keep every server-only module importing `server-only` (the required rule enforces this for llm and admin). Put client components in `src/components/`. |
 | R-4 | ~~CODEOWNERS placeholder username~~ | Resolved in 1.2: `@randygetc`. |
-| R-5 | Streaming vs R5 (§5). | Spike at 2.1; ADR if needed. |
+| R-5 | ~~Streaming vs R5 (§5)~~ | Resolved at 2.1: Server Actions stream (§3.1). Log usage in `finally`. |
 | R-6 | `server-only` throws outside the `react-server` condition, so Vitest and `npm run eval` can't import `src/lib/llm` directly. | Alias `server-only` to a no-op in the Vitest config; run evals through Vitest or with `--conditions=react-server`. Never remove the import to make a test pass. |
 | R-7 | The digest Edge Function (Deno) needs Zod schemas and prompts that live in `src/lib/`. | Duplicate a small digest schema in `supabase/functions/_shared/` for now; ADR if sharing is wanted. |
 | R-8 | Recurrence with RRULE libraries: `rrule.js` handles time zones poorly (TZID and floating times), so DST bugs are likely. | Expand in local wall-clock time and then convert with a proper tz library. The 1.8 tests are the gate. Choose the library at 1.7 (ask first). |
@@ -516,3 +676,7 @@ Items marked **(owner)** involve locked files that I can't and won't change.
 | R-15 | Anthropic model IDs and prices change. | `models.ts` and `pricing.ts` are the only places they appear; check the docs at 2.3 and 2.4 (rule 8). |
 | R-16 | The Storage path migration in Phase 3 (per-user → per-workspace paths) is not transactional with the table update. | Copy first, flip the rows, and delete old objects only after verification. Plan it in detail at 3.1. |
 | R-17 | Library versions have moved on (Next 16 `proxy.ts`, Supabase's new publishable and secret API keys, Zod 4, Tailwind 4). | Verify against current docs at 1.3; record choices in docs/conventions.md. |
+| R-18 | Vercel may buffer streamed Server Action responses; the 2.1 spike ran only locally (dev and `next start`). | Check with the extraction stream on the first preview deploy (3.x). If it buffers, propose an ADR; don't work around it. |
+| R-19 | The system prompt plus tools may be below the model's minimum cacheable length, so prompt caching silently does nothing. | Measure `cached_tokens` at 2.6 and record the prompt size. |
+| R-20 | An attachment is orphaned if the review tab is closed before save or discard (D-21). | Phase 3 cron deletes attachments older than 24 h; until then, a documented cleanup query. |
+| R-21 | `LLM_FAKE` (e2e fake model) must never be active in production. | Honored only when `NODE_ENV !== 'production'`, with a unit test; not set in Vercel. |

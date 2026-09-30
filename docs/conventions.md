@@ -111,3 +111,10 @@ Versions: Next 16.3, React 19.2, TypeScript 5.9, Tailwind 4, Zod 4, Vitest 5, @s
 - **Google placeholders.** `config.toml` enables Google with `env(...)` values; CI sets them to
   `ci-unused` so auth starts. e2e never uses Google (D-8).
 - **Pinned Supabase CLI** in `ci.yml` (2.118.0). Bump it on purpose, with a green run.
+
+## Streaming (step 2.1 spike, 2026-09-30)
+- **Stream from Server Actions** (R5): the action calls `getUser()`, validates with Zod, then returns an
+  async generator. The client reads it with `for await`. A `ReadableStream` works too; prefer the generator.
+- **Put the cleanup in `finally`.** When the user navigates away, the generator stops and `finally` runs,
+  but code after the loop doesn't. Usage logging and cancelling the Anthropic request both go there.
+- A second Server Action isn't blocked while a stream runs (checked in dev and `next start`, not on Vercel yet: R-18).
