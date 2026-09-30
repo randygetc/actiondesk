@@ -26,7 +26,9 @@ export default async function UsagePage() {
   }
 
   const tz = profile?.timezone ?? "America/Los_Angeles";
-  const since = new Date(Date.now() - DAYS * 24 * 60 * 60 * 1000);
+  // Read the clock at the edge, as the tasks page does.
+  const now = new Date();
+  const since = new Date(now.getTime() - DAYS * 24 * 60 * 60 * 1000);
   const { data, error } = await supabase
     .from("llm_usage")
     .select(
