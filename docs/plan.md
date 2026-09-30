@@ -2,7 +2,7 @@
 
 Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.md.
 
-- **Last updated:** 2026-09-30 (step 1.8: time zone edge cases)
+- **Last updated:** 2026-09-30 (step 1.9: CI)
 - **Sources:** CLAUDE.md, docs/architecture.md, docs/adr/0001–0005, docs/KICKOFF.md, guardrails/, .claude/
 - **Scope:** Phase 1 is in full detail. Phases 2 and 3 are outlined and get detailed in steps 2.1 and 3.1.
 - **Needs your decision:** the owner items in §7 (risks and gaps in the guardrails). All §6 decisions are made.
@@ -18,8 +18,8 @@ Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.
 | 1.5 | Google sign-in + profiles | done (PR #5); real Google sign-in verified 2026-09-30 (one profile after repeat sign-in) |
 | 1.6 | Projects CRUD (vague prompt) | done (PR #7) |
 | 1.7 | Tasks CRUD (full spec) | done (PR #8); library: temporal-polyfill (R-8), date-only = 23:59 local |
-| 1.8 | Timezone edge cases | PR open on `phase1/timezone-edge-cases`; found spring-forward drift, fixed by storing the local time in the rule (owner decision) |
-| 1.9 | CI | not started |
+| 1.8 | Timezone edge cases | done (PR #9); found spring-forward drift, fixed by storing the local time in the rule (owner decision) |
+| 1.9 | CI | PR open on `phase1/ci`: `.github/workflows/ci.yml`, no secrets; owner makes `ci` a required check |
 | 2.x | LLM features | outline only |
 | 3.x | Workspaces, jobs, prod | outline only |
 
