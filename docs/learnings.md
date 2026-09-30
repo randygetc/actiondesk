@@ -13,6 +13,7 @@ Friction debriefs are the owner's (KICKOFF). The eval score log below is kept by
 | 2026-09-30 | 2.4 | claude-haiku-4-5 (no effort/thinking, no fallback) | extract-v1 | 98% | $0.0036 | 3.0 s | Model comparison |
 | 2026-09-30 | 2.4 | claude-sonnet-5-5 (effort medium) | extract-v1 | 98% | $0.0082 | 2.9 s | Model comparison |
 | 2026-09-30 | 2.6 | claude-sonnet-5-5 (effort medium) | extract-v1 | 98% | $0.0059 | 3.0 s | Prompt caching on tools + system (1,407-token prefix; 18/19 calls read it): −28% cost |
+| 2026-09-30 | 2.7 | claude-sonnet-5-5 (effort medium) | extract-v1 | 98% over 22 | $0.0061 | 3.1 s | 3 attachment cases (hidden-text PDF, .vtt, .docx), all 100%. The model ignored the hidden instructions |
 
 Remaining misses in the 2.3 Opus run (all `project`): the model put "Reply to the recruiter" in Hiring, Ana's checkout PR
 in Website and the wireframes in Website, where `expected.json` says no project. These labels are

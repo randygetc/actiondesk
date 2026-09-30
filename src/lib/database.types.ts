@@ -57,6 +57,41 @@ export type Database = {
           },
         ];
       };
+      attachments: {
+        Row: {
+          created_at: string;
+          id: string;
+          mime_type: string;
+          owner_id: string;
+          size_bytes: number;
+          storage_path: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          mime_type: string;
+          owner_id?: string;
+          size_bytes: number;
+          storage_path: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          mime_type?: string;
+          owner_id?: string;
+          size_bytes?: number;
+          storage_path?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "attachments_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       llm_usage: {
         Row: {
           cached_tokens: number;

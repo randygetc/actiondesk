@@ -1,6 +1,7 @@
 // Extraction eval (plan §3.7).
 //   npm run eval                  replays recorded.json (no key, deterministic)
 //   EVAL_LIVE=1 npm run eval      calls the API and rewrites recorded.json
+// EVAL_ONLY=<text> limits the run to matching case names.
 // EVAL_MODEL=<id> runs another model (step 2.4), with its own recordings in
 // recorded.<id>.json, so CI keeps scoring the production model's recorded.json.
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -18,6 +19,7 @@ import {
 import { extractTasks, type ExtractInput } from "@/lib/llm/extract";
 import { EXTRACT_MODEL, type ModelConfig } from "@/lib/llm/models";
 import { costUsd } from "@/lib/llm/pricing";
+import { fileToNote } from "@/lib/attachments/note";
 
 import { loadCases } from "./lib/cases";
 import { formatReport, runEval, type Extractor } from "./lib/run";
@@ -40,15 +42,17 @@ function config(): ModelConfig {
   };
 }
 
-function toInput(c: EvalCase): ExtractInput {
+async function toInput(c: EvalCase): Promise<ExtractInput> {
+  // Files go through the same pipeline as uploads (detection, docx, transcripts).
+  let note: ExtractInput["note"];
+  if (c.input.kind === "text") note = { kind: "text", text: c.input.text };
+  else {
+    const r = await fileToNote(new Uint8Array(readFileSync(c.input.path)));
+    if (!r.ok) throw new Error(r.error);
+    note = r.note;
+  }
   return {
-    note:
-      c.input.kind === "text"
-        ? { kind: "text", text: c.input.text }
-        : {
-            kind: "pdf",
-            base64: readFileSync(c.input.path).toString("base64"),
-          },
+    note,
     now: new Date(c.context.now),
     timezone: c.context.timezone,
     userName: c.context.userName,
@@ -83,7 +87,7 @@ const extractor: Extractor = async (c) => {
   const started = performance.now();
   const tasks: ScoredTask[] = [];
   try {
-    for await (const e of extractTasks(client, toInput(c), {
+    for await (const e of extractTasks(client, await toInput(c), {
       config: config(),
     })) {
       if (e.type !== "task") continue;
@@ -120,7 +124,10 @@ function statsReport(): string {
 }
 
 it("extraction", { timeout: 30 * 60_000 }, async () => {
-  const result = await runEval(loadCases(root), extractor);
+  // EVAL_ONLY=<text> runs only cases whose name contains it.
+  const only = process.env.EVAL_ONLY;
+  const cases = loadCases(root).filter((c) => !only || c.name.includes(only));
+  const result = await runEval(cases, extractor);
   console.log(`\n${formatReport(result)}\n${statsReport()}\n`);
 
   expect(result.cases.filter((c) => c.status === "error")).toEqual([]);

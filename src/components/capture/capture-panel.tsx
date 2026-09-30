@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 
-import type { CaptureEvent, SaveResult } from "@/app/(app)/capture/actions";
+import type {
+  CaptureEvent,
+  SaveResult,
+  UploadResult,
+} from "@/app/(app)/capture/actions";
+import type { ActionResult } from "@/lib/action-result";
 import { fieldClass } from "@/components/tasks/types";
 import { Button } from "@/components/ui/button";
 import type { ExtractedTask, ReviewedTask } from "@/lib/validation/extraction";
@@ -35,8 +40,13 @@ function toRow(t: ExtractedTask, key: number): Row {
   };
 }
 
+const ACCEPT = ".pdf,.docx,.txt,.vtt,.srt";
+
 export function CapturePanel({
   extract,
+  extractFile,
+  upload,
+  discard,
   save,
   projects,
 }: {
@@ -44,7 +54,13 @@ export function CapturePanel({
     text: string;
     includeOthers: boolean;
   }) => Promise<AsyncGenerator<CaptureEvent>>;
-  save: (rows: ReviewedTask[]) => Promise<SaveResult>;
+  extractFile: (input: {
+    attachmentId: string;
+    includeOthers: boolean;
+  }) => Promise<AsyncGenerator<CaptureEvent>>;
+  upload: (formData: FormData) => Promise<UploadResult>;
+  discard: (id: string) => Promise<ActionResult>;
+  save: (rows: ReviewedTask[], attachmentId?: string) => Promise<SaveResult>;
   projects: { id: string; name: string }[];
 }) {
   const [text, setText] = useState("");
@@ -57,6 +73,20 @@ export function CapturePanel({
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<number | null>(null);
   const nextKey = useRef(0);
+  const [file, setFile] = useState<File | null>(null);
+  // The uploaded file behind the current review; deleted on save or discard (D-21).
+  const [attachmentId, setAttachmentId] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  function clearFile() {
+    setFile(null);
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  function dropAttachment() {
+    if (attachmentId) void discard(attachmentId);
+    setAttachmentId(null);
+  }
 
   async function onExtract() {
     setRows([]);
@@ -64,8 +94,30 @@ export function CapturePanel({
     setNotice(null);
     setSaved(null);
     setStatus("extracting");
+    dropAttachment();
     try {
-      const events = await extract({ text, includeOthers });
+      let events: AsyncGenerator<CaptureEvent>;
+      if (file) {
+        const form = new FormData();
+        form.set("file", file);
+        // A too-large body can fail before the action runs (platform limits).
+        const uploaded = await upload(form).catch((): UploadResult => ({
+          ok: false,
+          error: "Couldn't upload the file. Files can be at most 10 MB.",
+        }));
+        if (!uploaded.ok) {
+          setError(uploaded.error);
+          setStatus("idle");
+          return;
+        }
+        setAttachmentId(uploaded.data.id);
+        events = await extractFile({
+          attachmentId: uploaded.data.id,
+          includeOthers,
+        });
+      } else {
+        events = await extract({ text, includeOthers });
+      }
       for await (const e of events) {
         if (e.type === "task") {
           setRows((r) => [...r, toRow(e.task, nextKey.current++)]);
@@ -109,11 +161,14 @@ export function CapturePanel({
           sourceQuote,
         }),
       ),
+      attachmentId ?? undefined,
     );
     if (result.ok) {
       setSaved(result.data.count);
       setRows([]);
       setText("");
+      setAttachmentId(null);
+      clearFile();
       setStatus("idle");
     } else {
       const bad = Object.entries(result.fieldErrors ?? {})
@@ -122,6 +177,14 @@ export function CapturePanel({
       setError(bad ? `${result.error} ${bad}` : result.error);
       setStatus("reviewing");
     }
+  }
+
+  function onDiscard() {
+    dropAttachment();
+    clearFile();
+    setRows([]);
+    setNotice(null);
+    setStatus("idle");
   }
 
   const busy = status === "extracting" || status === "saving";
@@ -143,7 +206,29 @@ export function CapturePanel({
           maxLength={20_000}
           className="rounded-md border bg-background p-3 text-sm"
           placeholder="Paste notes here…"
+          disabled={file !== null}
         />
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <label htmlFor="note-file" className="font-medium">
+            Or upload a file
+          </label>
+          <input
+            id="note-file"
+            ref={fileRef}
+            type="file"
+            accept={ACCEPT}
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            className="text-sm"
+          />
+          {file ? (
+            <Button type="button" variant="ghost" size="sm" onClick={clearFile}>
+              Remove file
+            </Button>
+          ) : null}
+          <span className="text-muted-foreground">
+            PDF, Word, .txt, .vtt or .srt, up to 10 MB. Deleted after review.
+          </span>
+        </div>
         <div className="flex flex-wrap items-center gap-4">
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -156,7 +241,7 @@ export function CapturePanel({
           <Button
             type="button"
             onClick={onExtract}
-            disabled={busy || text.trim() === ""}
+            disabled={busy || (file === null && text.trim() === "")}
             className="ml-auto"
           >
             {status === "extracting" ? "Finding tasks…" : "Find tasks"}
@@ -209,6 +294,14 @@ export function CapturePanel({
                 {status === "saving"
                   ? "Saving…"
                   : `Save ${accepted.length} accepted`}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={onDiscard}
+                disabled={busy}
+              >
+                Discard
               </Button>
             </div>
           )}
