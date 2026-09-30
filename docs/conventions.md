@@ -70,3 +70,29 @@ Versions: Next 16.3, React 19.2, TypeScript 5.9, Tailwind 4, Zod 4, Vitest 5, @s
   confirm step works before hydration.
 - **Archive vs delete:** archive (`archived_at`) is the normal path and is reversible via Restore.
   Lists show active rows by default, with `?show=archived` for the rest.
+
+## Time, tasks and tests (step 1.7, 2026-09-29)
+- **Time library:** `temporal-polyfill` (owner decision for R-8). Import `Temporal` only inside
+  `src/lib/time/`; everything else uses its functions. No RRULE library: recurrence is the six
+  presets in `src/lib/time/recurrence.ts`, and the DB check on `tasks.recurrence` mirrors
+  `parseRRule`. Change both together.
+- **Time rules:**
+  - A due date without a time means 23:59 local (`END_OF_DAY`).
+  - Nonexistent local times (spring forward) move forward by the gap (02:30 → 03:30).
+    Ambiguous ones (fall back) take the earlier instant.
+  - Read the clock (`new Date()`) only at the edge (a page or an action) and pass `now` in.
+- **Recurrence:** the next due date is computed in TypeScript from the task's `recurrence_tz`
+  (D-5). `complete_task()` only makes "done + insert next" atomic and idempotent.
+- **Dev origin:** `next.config.ts` sets `allowedDevOrigins: ["127.0.0.1"]`. Without it, Next 16
+  blocks dev resources and **pages never hydrate in dev**, while no-JS paths (form posts,
+  `<details>`) still work. That hid the problem until 1.7.
+- **e2e after client navigation:** wait for the destination (heading or URL) before reading
+  `page.url()` or filling fields. Scope alerts by text, since Next's route announcer also has
+  `role="alert"`.
+- **Row actions** (complete/reopen) are submit buttons with `role="checkbox"`, so they work
+  before hydration. In e2e, `.click()` them rather than `.check()`.
+- **Labels** wrap only their control. A label wrapping a button pollutes the input's accessible name.
+- **Edit dialogs** are URL-driven (`/tasks?edit=<id>`). Closing navigates to the URL without
+  `edit`, and a successful save redirects.
+- **DB tests** (`*.db.test.ts`) run in the Vitest `db` project against local Supabase:
+  `npm run test:db`. Unit tests (`npm test`) exclude them.

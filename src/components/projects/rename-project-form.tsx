@@ -20,21 +20,22 @@ export function RenameProjectForm({
   return (
     <form action={formAction} className="flex flex-col gap-2">
       <input type="hidden" name="id" value={id} />
-      <label className="flex flex-col gap-1 text-sm">
+      <label htmlFor="project-name" className="text-sm">
         Name
-        <div className="flex gap-2">
-          <input
-            name="name"
-            defaultValue={name}
-            required
-            maxLength={100}
-            className={`${fieldClass} flex-1`}
-          />
-          <Button type="submit" variant="outline" disabled={pending}>
-            {pending ? "Saving…" : "Rename"}
-          </Button>
-        </div>
       </label>
+      <div className="flex gap-2">
+        <input
+          id="project-name"
+          name="name"
+          defaultValue={name}
+          required
+          maxLength={100}
+          className={`${fieldClass} flex-1`}
+        />
+        <Button type="submit" variant="outline" disabled={pending}>
+          {pending ? "Saving…" : "Rename"}
+        </Button>
+      </div>
       <p role="status" className="text-sm">
         {state?.ok
           ? "Saved."

@@ -11,11 +11,13 @@ export function ProjectDangerZone({
   deleteAction,
   id,
   archived,
+  taskCount,
 }: {
   archiveAction: ProjectAction;
   deleteAction: ProjectAction;
   id: string;
   archived: boolean;
+  taskCount: number;
 }) {
   const [archiveState, archiveFormAction, archiving] = useActionState(
     archiveAction,
@@ -62,7 +64,10 @@ export function ProjectDangerZone({
             {deleting ? "Deleting…" : "Yes, delete permanently"}
           </Button>
           <span className="text-muted-foreground">
-            This can&apos;t be undone.
+            This can&apos;t be undone.{" "}
+            {taskCount === 0
+              ? "The project has no tasks."
+              : `Its ${taskCount} ${taskCount === 1 ? "task stays" : "tasks stay"}, without a project.`}
           </span>
         </form>
       </details>

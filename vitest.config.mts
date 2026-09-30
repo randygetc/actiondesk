@@ -22,7 +22,18 @@ export default defineConfig({
         test: {
           name: "unit",
           include: ["src/**/*.test.{ts,tsx}"],
+          exclude: ["src/**/*.db.test.ts"],
           environment: "node",
+        },
+      },
+      {
+        // Runs against local Supabase (`supabase start`): npm run test:db
+        extends: true,
+        test: {
+          name: "db",
+          include: ["src/**/*.db.test.ts"],
+          environment: "node",
+          setupFiles: ["test/load-env.ts"],
         },
       },
       {
