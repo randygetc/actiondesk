@@ -1,13 +1,13 @@
 [
   {
-    "model": "claude-sonnet-5-5",
-    "id": "msg_011CfZ6LnUKJBMD1X6Z3CY3R",
+    "model": "claude-haiku-4-5-20251001",
+    "id": "msg_011CfZ6DujCHf5oqSgT2RnR9",
     "type": "message",
     "role": "assistant",
     "content": [
       {
         "type": "tool_use",
-        "id": "toolu_01AugKK3MSVGysGQLtYvQv66",
+        "id": "toolu_01WK27ERadBYt5efeVXR8HKw",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -24,7 +24,7 @@
       },
       {
         "type": "tool_use",
-        "id": "toolu_01B8u8zRHSXkHtnTsoWnr8Ej",
+        "id": "toolu_01FYK6VZLyaoymKbJL2zHQAC",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -35,13 +35,13 @@
           "due_date": "2026-10-31",
           "due_time": null,
           "project_id": null,
-          "confidence": 0.93,
+          "confidence": 0.95,
           "source_quote": "reconcile the contractor invoices EOM"
         }
       },
       {
         "type": "tool_use",
-        "id": "toolu_01UFMr3gEGj4KHEeN5ivmFQY",
+        "id": "toolu_01JqPqTfaPDNA1EELcMu3TyL",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -51,8 +51,8 @@
           "assignee": "me",
           "due_date": "2026-10-06",
           "due_time": null,
-          "project_id": "00000000-0000-4000-8000-000000000002",
-          "confidence": 0.9,
+          "project_id": null,
+          "confidence": 0.95,
           "source_quote": "reply to the recruiter EOD"
         }
       }
@@ -62,33 +62,16 @@
     "stop_sequence": null,
     "stop_details": null,
     "usage": {
-      "input_tokens": 1960,
+      "input_tokens": 1840,
       "cache_creation_input_tokens": 0,
       "cache_read_input_tokens": 0,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
         "ephemeral_1h_input_tokens": 0
       },
-      "output_tokens": 675,
+      "output_tokens": 536,
       "service_tier": "standard",
-      "inference_geo": "global",
-      "iterations": [
-        {
-          "input_tokens": 1960,
-          "output_tokens": 675,
-          "cache_read_input_tokens": 0,
-          "cache_creation_input_tokens": 0,
-          "cache_creation": {
-            "ephemeral_5m_input_tokens": 0,
-            "ephemeral_1h_input_tokens": 0
-          },
-          "type": "message",
-          "model": null
-        }
-      ],
-      "output_tokens_details": {
-        "thinking_tokens": 0
-      }
+      "inference_geo": "not_available"
     },
     "diagnostics": null,
     "parsed_output": null

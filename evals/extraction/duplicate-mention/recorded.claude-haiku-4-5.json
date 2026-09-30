@@ -1,0 +1,45 @@
+[
+  {
+    "model": "claude-haiku-4-5-20251001",
+    "id": "msg_011CfZ6DbGgkG6NQqxuBdANq",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01WKhtPnYy6w624mzfFGwNsd",
+        "name": "add_task",
+        "caller": {
+          "type": "direct"
+        },
+        "input": {
+          "title": "Fix the broken signup form on the website",
+          "assignee": "me",
+          "due_date": "2026-10-06",
+          "due_time": "17:00",
+          "project_id": "00000000-0000-4000-8000-000000000001",
+          "confidence": 0.95,
+          "source_quote": "I'll fix the broken signup form on the website today. the signup form fix is my top priority, will have it done by end of day."
+        }
+      }
+    ],
+    "container": null,
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "stop_details": null,
+    "usage": {
+      "input_tokens": 1852,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 225,
+      "service_tier": "standard",
+      "inference_geo": "not_available"
+    },
+    "diagnostics": null,
+    "parsed_output": null
+  }
+]

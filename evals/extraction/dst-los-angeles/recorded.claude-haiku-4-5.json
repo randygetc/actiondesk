@@ -1,13 +1,13 @@
 [
   {
-    "model": "claude-sonnet-5-5",
-    "id": "msg_011CfZ6LHbFB6rZsJYS1j6jG",
+    "model": "claude-haiku-4-5-20251001",
+    "id": "msg_011CfZ6DESJDiWH933ZwEUzi",
     "type": "message",
     "role": "assistant",
     "content": [
       {
         "type": "tool_use",
-        "id": "toolu_01JF3oWXZEHFfUrKEnUBUdks",
+        "id": "toolu_01HUohw3ciphCcXuW3kaABSY",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -18,13 +18,13 @@
           "due_date": "2026-11-02",
           "due_time": "09:00",
           "project_id": null,
-          "confidence": 0.9,
+          "confidence": 0.95,
           "source_quote": "run the payroll export Monday at 9am"
         }
       },
       {
         "type": "tool_use",
-        "id": "toolu_01FYLdphrxQ1awFVLJja79q6",
+        "id": "toolu_012bSx7qACRAw9cvWEN8fNfv",
         "name": "add_task",
         "caller": {
           "type": "direct"
@@ -35,7 +35,7 @@
           "due_date": "2026-11-01",
           "due_time": null,
           "project_id": null,
-          "confidence": 0.9,
+          "confidence": 0.95,
           "source_quote": "submit the expense report by Sunday"
         }
       }
@@ -45,33 +45,16 @@
     "stop_sequence": null,
     "stop_details": null,
     "usage": {
-      "input_tokens": 1931,
+      "input_tokens": 1824,
       "cache_creation_input_tokens": 0,
       "cache_read_input_tokens": 0,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
         "ephemeral_1h_input_tokens": 0
       },
-      "output_tokens": 419,
+      "output_tokens": 349,
       "service_tier": "standard",
-      "inference_geo": "global",
-      "iterations": [
-        {
-          "input_tokens": 1931,
-          "output_tokens": 419,
-          "cache_read_input_tokens": 0,
-          "cache_creation_input_tokens": 0,
-          "cache_creation": {
-            "ephemeral_5m_input_tokens": 0,
-            "ephemeral_1h_input_tokens": 0
-          },
-          "type": "message",
-          "model": null
-        }
-      ],
-      "output_tokens_details": {
-        "thinking_tokens": 0
-      }
+      "inference_geo": "not_available"
     },
     "diagnostics": null,
     "parsed_output": null

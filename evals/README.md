@@ -13,7 +13,8 @@ Copy `_template/` to start. Folders starting with `_` are skipped.
 | `case.json` | you | the context the model gets: `now`, `timezone`, `userName`, `projects`, `includeOthers` |
 | `input.txt` (or `input.pdf`) | you | the note, email or chat thread, exactly as pasted |
 | `expected.json` | you | the tasks a careful human would extract (an empty array if there are none) |
-| `recorded.json` | the runner | raw API responses from the last live run; don't edit |
+| `recorded.json` | the runner | raw API responses for the production model (`EXTRACT_MODEL`); CI scores these. Don't edit |
+| `recorded.<model>.json` | the runner | the same, per model, from `EVAL_MODEL=<model>` runs (step 2.4 comparison) |
 
 ### `case.json`
 - `now`: when the note is being processed, as ISO with offset

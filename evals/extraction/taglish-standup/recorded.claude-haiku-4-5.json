@@ -1,41 +1,41 @@
 [
   {
-    "model": "claude-sonnet-5-5",
-    "id": "msg_011CfZ6PwjmehRS5v8Vf2ffr",
+    "model": "claude-haiku-4-5-20251001",
+    "id": "msg_011CfZ6H667yYUhQAvTVWp7Y",
     "type": "message",
     "role": "assistant",
     "content": [
       {
         "type": "tool_use",
-        "id": "toolu_01QbnGDYTdRaKMaGP6hsL8bd",
+        "id": "toolu_01GJCoWenjpmCtayPwda4kpj",
         "name": "add_task",
         "caller": {
           "type": "direct"
         },
         "input": {
-          "title": "Send final wireframes to Ana",
+          "title": "Pass final wireframes to Ana",
           "assignee": "me",
           "due_date": "2026-10-07",
           "due_time": null,
           "project_id": null,
-          "confidence": 0.9,
+          "confidence": 0.95,
           "source_quote": "Ipapasa ko kay Ana yung final version bukas ng umaga."
         }
       },
       {
         "type": "tool_use",
-        "id": "toolu_01AVGSdxQmfTXQrCz22Wense",
+        "id": "toolu_017ai72ZDppBv3uD7MgKKHqB",
         "name": "add_task",
         "caller": {
           "type": "direct"
         },
         "input": {
-          "title": "Follow up with supplier about merch",
+          "title": "Follow up with supplier for merch",
           "assignee": "me",
           "due_date": "2026-10-09",
           "due_time": null,
           "project_id": null,
-          "confidence": 0.9,
+          "confidence": 0.95,
           "source_quote": "Kailangan ko rin i-follow up yung supplier para sa merch, by Friday dapat."
         }
       }
@@ -45,33 +45,16 @@
     "stop_sequence": null,
     "stop_details": null,
     "usage": {
-      "input_tokens": 2012,
+      "input_tokens": 1878,
       "cache_creation_input_tokens": 0,
       "cache_read_input_tokens": 0,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
         "ephemeral_1h_input_tokens": 0
       },
-      "output_tokens": 460,
+      "output_tokens": 373,
       "service_tier": "standard",
-      "inference_geo": "global",
-      "iterations": [
-        {
-          "input_tokens": 2012,
-          "output_tokens": 460,
-          "cache_read_input_tokens": 0,
-          "cache_creation_input_tokens": 0,
-          "cache_creation": {
-            "ephemeral_5m_input_tokens": 0,
-            "ephemeral_1h_input_tokens": 0
-          },
-          "type": "message",
-          "model": null
-        }
-      ],
-      "output_tokens_details": {
-        "thinking_tokens": 0
-      }
+      "inference_geo": "not_available"
     },
     "diagnostics": null,
     "parsed_output": null

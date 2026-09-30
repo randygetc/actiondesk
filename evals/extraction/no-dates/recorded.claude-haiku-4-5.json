@@ -1,59 +1,63 @@
 [
   {
-    "model": "claude-sonnet-5-5",
-    "id": "msg_011CfZ6NxxACgkg9V5e78W9K",
+    "model": "claude-haiku-4-5-20251001",
+    "id": "msg_011CfZ6FYoeUq2BYFc4Ep5Ji",
     "type": "message",
     "role": "assistant",
     "content": [
       {
+        "type": "text",
+        "text": "I'll extract the tasks from the note. However, I notice that the note lists things to do \"at some point\" without specific deadlines or times. Let me extract these as tasks:"
+      },
+      {
         "type": "tool_use",
-        "id": "toolu_01JavMxphE83nYoZxMs5Y9cm",
+        "id": "toolu_01QQkMj5KjLkhvxysf3SRpu4",
         "name": "add_task",
         "caller": {
           "type": "direct"
         },
         "input": {
-          "title": "Fix typo in site footer",
+          "title": "Renew the website domain",
           "assignee": "me",
           "due_date": null,
           "due_time": null,
           "project_id": "00000000-0000-4000-8000-000000000001",
           "confidence": 0.9,
-          "source_quote": "fix the typo in the site footer"
+          "source_quote": "renew the website domain"
         }
       },
       {
         "type": "tool_use",
-        "id": "toolu_01S2qZYeyK42EUmpivo5qHja",
+        "id": "toolu_011PVg3rV4ifAs2LrSr6tqv4",
         "name": "add_task",
         "caller": {
           "type": "direct"
         },
         "input": {
-          "title": "Schedule interviews for the two backend candidates",
-          "assignee": "me",
-          "due_date": null,
-          "due_time": null,
-          "project_id": "00000000-0000-4000-8000-000000000002",
-          "confidence": 0.9,
-          "source_quote": "schedule interviews for the two backend candidates"
-        }
-      },
-      {
-        "type": "tool_use",
-        "id": "toolu_01MH4ro1Kyk3GewnxqRinFFr",
-        "name": "add_task",
-        "caller": {
-          "type": "direct"
-        },
-        "input": {
-          "title": "Order new chairs for the office",
+          "title": "Clean up the old Figma files",
           "assignee": "me",
           "due_date": null,
           "due_time": null,
           "project_id": null,
           "confidence": 0.9,
-          "source_quote": "order new chairs for the office"
+          "source_quote": "clean up the old Figma files"
+        }
+      },
+      {
+        "type": "tool_use",
+        "id": "toolu_015WgBx2WZZPmG6cyqVT8tiU",
+        "name": "add_task",
+        "caller": {
+          "type": "direct"
+        },
+        "input": {
+          "title": "Ask Carlo about the laptop refresh",
+          "assignee": "me",
+          "due_date": null,
+          "due_time": null,
+          "project_id": null,
+          "confidence": 0.9,
+          "source_quote": "ask Carlo about the laptop refresh"
         }
       }
     ],
@@ -62,33 +66,16 @@
     "stop_sequence": null,
     "stop_details": null,
     "usage": {
-      "input_tokens": 1950,
+      "input_tokens": 1830,
       "cache_creation_input_tokens": 0,
       "cache_read_input_tokens": 0,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
         "ephemeral_1h_input_tokens": 0
       },
-      "output_tokens": 649,
+      "output_tokens": 553,
       "service_tier": "standard",
-      "inference_geo": "global",
-      "iterations": [
-        {
-          "input_tokens": 1950,
-          "output_tokens": 649,
-          "cache_read_input_tokens": 0,
-          "cache_creation_input_tokens": 0,
-          "cache_creation": {
-            "ephemeral_5m_input_tokens": 0,
-            "ephemeral_1h_input_tokens": 0
-          },
-          "type": "message",
-          "model": null
-        }
-      ],
-      "output_tokens_details": {
-        "thinking_tokens": 0
-      }
+      "inference_geo": "not_available"
     },
     "diagnostics": null,
     "parsed_output": null

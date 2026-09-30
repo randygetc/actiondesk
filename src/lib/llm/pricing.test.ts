@@ -25,6 +25,16 @@ describe("costUsd", () => {
     ).toBe(0);
   });
 
+  it("prices a dated snapshot as its alias", () => {
+    expect(isKnownModel("claude-haiku-4-5-20251001")).toBe(true);
+    expect(
+      costUsd("claude-haiku-4-5-20251001", {
+        input_tokens: 1_000_000,
+        output_tokens: 0,
+      }),
+    ).toBe(1);
+  });
+
   it("prices an unknown model at the worst known rate", () => {
     expect(isKnownModel("claude-new-9")).toBe(false);
     expect(
