@@ -7,6 +7,7 @@ import type { z } from "zod";
 import type { ActionResult } from "@/lib/action-result";
 import { log } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
+import { currentWorkspace, VIEW_ONLY_MESSAGE } from "@/lib/workspace/current";
 import {
   archiveProjectSchema,
   createProjectSchema,
@@ -29,6 +30,24 @@ function invalid(error: z.ZodError): ProjectResult {
 
 const signedOut: ProjectResult = { ok: false, error: "You are signed out." };
 const notFound: ProjectResult = { ok: false, error: "Project not found." };
+const viewOnly: ProjectResult = { ok: false, error: VIEW_ONLY_MESSAGE };
+
+/**
+ * After an update or delete matched 0 rows: a project the user can still see
+ * means RLS refused the write (a viewer); otherwise it's missing or in another
+ * workspace, which looks the same as missing.
+ */
+async function missingOrViewOnly(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  id: string,
+): Promise<ProjectResult> {
+  const { data } = await supabase
+    .from("projects")
+    .select("id")
+    .eq("id", id)
+    .maybeSingle();
+  return data ? viewOnly : notFound;
+}
 
 /** Maps Postgres errors to messages; never returns raw DB errors to the client. */
 function dbError(
@@ -36,10 +55,12 @@ function dbError(
   userId: string,
   event: string,
 ): ProjectResult {
+  if (code === "42501") return viewOnly;
   if (code === "23505") {
     return {
       ok: false,
-      error: "You already have a project with that name (it may be archived).",
+      error:
+        "This workspace already has a project with that name (it may be archived).",
       fieldErrors: { name: ["Name already used"] },
     };
   }
@@ -72,9 +93,11 @@ export async function createProject(
   const { supabase, user } = await getUserClient();
   if (!user) return signedOut;
 
+  // New projects go into the current workspace (D-23); RLS checks the role.
+  const { current } = await currentWorkspace(supabase, user.id);
   const { data, error } = await supabase
     .from("projects")
-    .insert({ name: parsed.data.name })
+    .insert({ name: parsed.data.name, workspace_id: current.id })
     .select("id")
     .single();
   if (error) return dbError(error.code, user.id, "project.create_failed");
@@ -97,14 +120,14 @@ export async function renameProject(
   const { supabase, user } = await getUserClient();
   if (!user) return signedOut;
 
-  // RLS limits this to the user's own projects; 0 rows means not found.
+  // RLS limits writes to members of the project's workspace.
   const { data, error } = await supabase
     .from("projects")
     .update({ name: parsed.data.name })
     .eq("id", parsed.data.id)
     .select("id");
   if (error) return dbError(error.code, user.id, "project.rename_failed");
-  if (data.length === 0) return notFound;
+  if (data.length === 0) return missingOrViewOnly(supabase, parsed.data.id);
 
   log.info("project.renamed", { userId: user.id, projectId: parsed.data.id });
   revalidate(parsed.data.id);
@@ -133,7 +156,7 @@ export async function archiveProject(
     .eq("id", parsed.data.id)
     .select("id");
   if (error) return dbError(error.code, user.id, "project.archive_failed");
-  if (data.length === 0) return notFound;
+  if (data.length === 0) return missingOrViewOnly(supabase, parsed.data.id);
 
   log.info(parsed.data.archived ? "project.archived" : "project.restored", {
     userId: user.id,
@@ -160,7 +183,7 @@ export async function deleteProject(
     .eq("id", parsed.data.id)
     .select("id");
   if (error) return dbError(error.code, user.id, "project.delete_failed");
-  if (data.length === 0) return notFound;
+  if (data.length === 0) return missingOrViewOnly(supabase, parsed.data.id);
 
   log.info("project.deleted", { userId: user.id, projectId: parsed.data.id });
   revalidate();

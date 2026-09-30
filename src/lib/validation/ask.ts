@@ -40,6 +40,8 @@ export const createTaskInput = z
 
 /** What the UI shows as a card, and sends back to confirmCreateTask. */
 export const createTaskProposalSchema = z.strictObject({
+  /** Where it was proposed; RLS re-checks the role on confirm. */
+  workspaceId: z.uuid(),
   title: z.string(),
   dueDate: z.string().nullable(),
   dueTime: z.string().nullable(),

@@ -75,6 +75,7 @@ export async function recordUsage(
     outcome: Outcome;
     meter: UsageMeter;
     promptVersion: string;
+    workspaceId?: string;
   },
 ): Promise<void> {
   const s = args.meter.summary();
@@ -89,6 +90,7 @@ export async function recordUsage(
     p_latency_ms: s.latencyMs,
     p_request_id: s.requestId ?? undefined,
     p_prompt_version: args.promptVersion,
+    p_workspace_id: args.workspaceId,
   });
   const fields = {
     userId: args.userId,

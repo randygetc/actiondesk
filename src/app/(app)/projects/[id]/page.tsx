@@ -7,6 +7,7 @@ import { QuickAddForm } from "@/components/tasks/quick-add-form";
 import { TaskRow } from "@/components/tasks/task-row";
 import { requireUser } from "@/lib/auth/user";
 import { projectIdSchema } from "@/lib/validation/project";
+import { canEdit, myWorkspaces } from "@/lib/workspace/current";
 
 import { completeTask, createTask, reopenTask } from "../../tasks/actions";
 import { archiveProject, deleteProject, renameProject } from "../actions";
@@ -18,15 +19,21 @@ export default async function ProjectPage({
   if (!parsed.success) notFound();
 
   const { supabase, user } = await requireUser();
-  // RLS returns nothing for another user's project, so it 404s like a missing one.
+  // RLS returns nothing for a project outside the user's workspaces, so it
+  // 404s like a missing one. The page follows the project's own workspace,
+  // which may not be the current one.
   const { data: project } = await supabase
     .from("projects")
-    .select("id, name, archived_at")
+    .select("id, name, archived_at, workspace_id")
     .eq("id", parsed.data)
     .maybeSingle();
   if (!project) notFound();
 
   const archived = project.archived_at !== null;
+  const workspace = (await myWorkspaces(supabase, user.id)).find(
+    (w) => w.id === project.workspace_id,
+  );
+  const editable = !!workspace && canEdit(workspace.role);
 
   const [{ data: profile }, { data: tasks }, { count: taskCount }] =
     await Promise.all([
@@ -66,17 +73,26 @@ export default async function ProjectPage({
         ) : null}
       </h1>
 
-      <RenameProjectForm
-        action={renameProject}
-        id={project.id}
-        name={project.name}
-      />
+      {workspace ? (
+        <p className="text-sm text-muted-foreground">
+          In {workspace.name}
+          {editable ? "" : " (view only)"}
+        </p>
+      ) : null}
+
+      {editable ? (
+        <RenameProjectForm
+          action={renameProject}
+          id={project.id}
+          name={project.name}
+        />
+      ) : null}
 
       <section aria-labelledby="project-tasks" className="flex flex-col gap-2">
         <h2 id="project-tasks" className="font-medium">
           Open tasks
         </h2>
-        {archived ? null : (
+        {archived || !editable ? null : (
           <QuickAddForm action={createTask} projectId={project.id} />
         )}
         {tasks && tasks.length > 0 ? (
@@ -90,6 +106,7 @@ export default async function ProjectPage({
                 editHref={`/tasks?edit=${task.id}`}
                 completeAction={completeTask}
                 reopenAction={reopenTask}
+                readOnly={!editable}
               />
             ))}
           </ul>
@@ -98,13 +115,15 @@ export default async function ProjectPage({
         )}
       </section>
 
-      <ProjectDangerZone
-        archiveAction={archiveProject}
-        deleteAction={deleteProject}
-        id={project.id}
-        archived={archived}
-        taskCount={taskCount ?? 0}
-      />
+      {editable ? (
+        <ProjectDangerZone
+          archiveAction={archiveProject}
+          deleteAction={deleteProject}
+          id={project.id}
+          archived={archived}
+          taskCount={taskCount ?? 0}
+        />
+      ) : null}
     </div>
   );
 }

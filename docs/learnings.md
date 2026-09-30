@@ -77,3 +77,20 @@ The security-reviewer subagent reviewed all of Phase 2 (`a8797f2..`). It found n
 | 11 | Info | Prompt context outside the data tag | Phase 3 (R-26) |
 | 12 | Info | The upload form wasn't validated with Zod | **Fixed** |
 | 13 | Info | Vercel's 4.5 MB limit | Already tracked (R-22) |
+
+## Workspace migration rehearsal (step 3.2, 2026-09-30)
+
+The migrations ran on the local database: real dev data plus two seeded users, each with projects (one
+archived), one-off tasks, a completed recurring series and usage rows.
+
+| | Before | After |
+|---|---|---|
+| profiles / projects / tasks / series rows / usage | 88 / 21 / 276 / 226 / 41 | identical |
+| Tasks and projects per owner | 33 / 17 owner rows | identical |
+| Personal workspaces | n/a | 88, one per user |
+| Tasks outside their creator's Personal workspace | n/a | 0 |
+
+- The migration's own self-check (counts, placement, project/task in the same workspace) passed. A
+  mismatch would have aborted the whole migration.
+- After the migration, a user completing a recurring task got the next occurrence in the same workspace.
+- The rollback SQL restored per-owner access exactly (tested in a rolled-back transaction).

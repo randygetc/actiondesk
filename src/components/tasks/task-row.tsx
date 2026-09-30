@@ -16,6 +16,7 @@ export function TaskRow({
   editHref,
   completeAction,
   reopenAction,
+  readOnly = false,
 }: {
   task: TaskRowData;
   tz: string;
@@ -23,6 +24,8 @@ export function TaskRow({
   editHref: string;
   completeAction: RowAction;
   reopenAction: RowAction;
+  /** Viewers (step 3.2): status shown, no complete/edit controls. */
+  readOnly?: boolean;
 }) {
   const done = task.status === "done";
   const due = task.due_at ? new Date(task.due_at) : null;
@@ -31,25 +34,43 @@ export function TaskRow({
 
   return (
     <li className="flex items-center gap-3 px-4 py-2">
-      <form action={done ? reopenAction : completeAction}>
-        <input type="hidden" name="id" value={task.id} />
-        <button
-          type="submit"
-          role="checkbox"
-          aria-checked={done}
-          aria-label={`${done ? "Reopen" : "Complete"} ${task.title}`}
-          className="flex size-4 items-center justify-center rounded border text-xs"
+      {readOnly ? (
+        <span
+          role="img"
+          aria-label={done ? "Done" : "Not done"}
+          className="flex size-4 items-center justify-center rounded border text-xs text-muted-foreground"
         >
           {done ? "✓" : null}
-        </button>
-      </form>
+        </span>
+      ) : (
+        <form action={done ? reopenAction : completeAction}>
+          <input type="hidden" name="id" value={task.id} />
+          <button
+            type="submit"
+            role="checkbox"
+            aria-checked={done}
+            aria-label={`${done ? "Reopen" : "Complete"} ${task.title}`}
+            className="flex size-4 items-center justify-center rounded border text-xs"
+          >
+            {done ? "✓" : null}
+          </button>
+        </form>
+      )}
       <div className="flex min-w-0 flex-1 flex-col">
-        <Link
-          href={editHref}
-          className={`truncate ${done ? "text-muted-foreground line-through" : ""}`}
-        >
-          {task.title}
-        </Link>
+        {readOnly ? (
+          <span
+            className={`truncate ${done ? "text-muted-foreground line-through" : ""}`}
+          >
+            {task.title}
+          </span>
+        ) : (
+          <Link
+            href={editHref}
+            className={`truncate ${done ? "text-muted-foreground line-through" : ""}`}
+          >
+            {task.title}
+          </Link>
+        )}
         <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">
           {due ? (
             <span className={overdue ? "text-destructive" : ""}>

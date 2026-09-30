@@ -13,12 +13,22 @@ const supabase = createClient<Database>(
   { auth: { persistSession: false } },
 );
 
+let workspaceId: string;
+
 beforeAll(async () => {
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email: `db-${randomUUID()}@example.com`,
     password: randomUUID(),
   });
   if (error) throw error;
+  // Every new user has a Personal workspace (step 3.2).
+  const { data: ws, error: wsError } = await supabase
+    .from("workspace_members")
+    .select("workspace_id")
+    .eq("user_id", data.user!.id)
+    .single();
+  if (wsError) throw wsError;
+  workspaceId = ws.workspace_id;
 });
 
 it("two concurrent completions create exactly one next occurrence", async () => {
@@ -26,6 +36,7 @@ it("two concurrent completions create exactly one next occurrence", async () => 
     const { data: task, error } = await supabase
       .from("tasks")
       .insert({
+        workspace_id: workspaceId,
         title: `Race ${i}`,
         due_at: "2026-10-06T16:00:00Z",
         recurrence: "FREQ=DAILY",

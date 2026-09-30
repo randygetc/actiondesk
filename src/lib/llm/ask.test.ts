@@ -14,6 +14,7 @@ function context(rows: unknown[] = []) {
   const db = fakeSupabase(rows);
   const ctx: AskContext = {
     supabase: db.client,
+    workspaceId: "00000000-0000-4000-8000-0000000000aa",
     now: new Date("2026-10-06T01:15:00Z"),
     timezone: "Asia/Manila",
     userName: "Randy",

@@ -1,5 +1,6 @@
 // ADR-0003 / plan 2.5: Ask tools run with the user's client, so user B asking
-// about user A's data gets nothing. Runs against local Supabase:
+// about user A's data gets nothing, even when B's context names A's workspace
+// (a forged workspace cookie, R-28, step 3.2). Runs against local Supabase:
 // npm run test:db
 import { randomUUID } from "node:crypto";
 
@@ -17,7 +18,10 @@ import {
   searchTasks,
 } from "./tasks";
 
-async function newUser(): Promise<SupabaseClient<Database>> {
+async function newUser(): Promise<{
+  client: SupabaseClient<Database>;
+  workspaceId: string;
+}> {
   const client = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
@@ -28,36 +32,47 @@ async function newUser(): Promise<SupabaseClient<Database>> {
     password: randomUUID(),
   });
   if (error) throw error;
-  return client;
+  const { data: ws, error: wsError } = await client
+    .from("workspace_members")
+    .select("workspace_id")
+    .single();
+  if (wsError) throw wsError;
+  return { client, workspaceId: ws.workspace_id };
 }
 
 const now = new Date("2026-10-06T01:15:00Z");
 let a: SupabaseClient<Database>;
 let b: SupabaseClient<Database>;
+let wsA: string;
+let wsB: string;
 let projectA: string;
 
-const ctx = (supabase: SupabaseClient<Database>) => ({
+const ctx = (supabase: SupabaseClient<Database>, workspaceId: string) => ({
   supabase,
+  workspaceId,
   now,
   timezone: "Asia/Manila",
 });
 
 beforeAll(async () => {
-  [a, b] = await Promise.all([newUser(), newUser()]);
+  const [ua, ub] = await Promise.all([newUser(), newUser()]);
+  [a, wsA, b, wsB] = [ua.client, ua.workspaceId, ub.client, ub.workspaceId];
   const { data: project, error } = await a
     .from("projects")
-    .insert({ name: "Secret launch" })
+    .insert({ name: "Secret launch", workspace_id: wsA })
     .select("id")
     .single();
   if (error) throw error;
   projectA = project.id;
   const { error: taskError } = await a.from("tasks").insert([
     {
+      workspace_id: wsA,
       title: "Secret overdue task",
       project_id: projectA,
       due_at: "2026-10-01T00:00:00Z",
     },
     {
+      workspace_id: wsA,
       title: "Secret future task",
       project_id: projectA,
       due_at: "2026-12-01T00:00:00Z",
@@ -68,19 +83,19 @@ beforeAll(async () => {
 
 describe("user A sees their own data (control)", () => {
   it("search_tasks, list_overdue and get_project_summary find A's tasks", async () => {
-    const search = await searchTasks.run(ctx(a), {
+    const search = await searchTasks.run(ctx(a, wsA), {
       query: "Secret",
       status: null,
       project_id: null,
     });
     expect((search.result as { tasks: unknown[] }).tasks).toHaveLength(2);
-    const overdue = await listOverdue.run(ctx(a), {});
+    const overdue = await listOverdue.run(ctx(a, wsA), {});
     expect(
       (overdue.result as { tasks: { title: string }[] }).tasks.map(
         (t) => t.title,
       ),
     ).toEqual(["Secret overdue task"]);
-    const summary = await getProjectSummary.run(ctx(a), {
+    const summary = await getProjectSummary.run(ctx(a, wsA), {
       project_id: projectA,
     });
     expect(summary.result).toMatchObject({
@@ -90,9 +105,37 @@ describe("user A sees their own data (control)", () => {
   });
 });
 
+describe("user B with a forged workspace (B's session, A's workspace id)", () => {
+  it("every read tool still returns nothing: RLS, not the filter, decides", async () => {
+    const forged = ctx(b, wsA);
+    expect(
+      (
+        await searchTasks.run(forged, {
+          query: "",
+          status: null,
+          project_id: null,
+        })
+      ).result,
+    ).toEqual({ tasks: [] });
+    expect((await listOverdue.run(forged, {})).result).toEqual({ tasks: [] });
+    expect(
+      (await getProjectSummary.run(forged, { project_id: projectA })).result,
+    ).toEqual({
+      found: false,
+    });
+  });
+
+  it("a proposal into A's workspace can't be saved by B", async () => {
+    const { error } = await b
+      .from("tasks")
+      .insert({ workspace_id: wsA, title: "Forged" });
+    expect(error?.code).toBe("42501");
+  });
+});
+
 describe("user B gets nothing of A's", () => {
   it("search_tasks by title finds nothing", async () => {
-    const out = await searchTasks.run(ctx(b), {
+    const out = await searchTasks.run(ctx(b, wsB), {
       query: "Secret",
       status: null,
       project_id: null,
@@ -101,7 +144,7 @@ describe("user B gets nothing of A's", () => {
   });
 
   it("search_tasks filtered to A's project finds nothing", async () => {
-    const out = await searchTasks.run(ctx(b), {
+    const out = await searchTasks.run(ctx(b, wsB), {
       query: "",
       status: null,
       project_id: projectA,
@@ -110,17 +153,19 @@ describe("user B gets nothing of A's", () => {
   });
 
   it("list_overdue shows none of A's overdue tasks", async () => {
-    const out = await listOverdue.run(ctx(b), {});
+    const out = await listOverdue.run(ctx(b, wsB), {});
     expect(out.result).toEqual({ tasks: [] });
   });
 
   it("get_project_summary on A's project id says not found", async () => {
-    const out = await getProjectSummary.run(ctx(b), { project_id: projectA });
+    const out = await getProjectSummary.run(ctx(b, wsB), {
+      project_id: projectA,
+    });
     expect(out.result).toEqual({ found: false });
   });
 
   it("create_task can't propose a task in A's project", async () => {
-    const out = await createTask.run(ctx(b), {
+    const out = await createTask.run(ctx(b, wsB), {
       title: "Sneaky",
       due_date: null,
       due_time: null,
@@ -169,7 +214,7 @@ describe("user B gets nothing of A's", () => {
         yield { type: "message", message };
       },
     };
-    const askCtx: AskContext = { ...ctx(b), userName: "B", projects: [] };
+    const askCtx: AskContext = { ...ctx(b, wsB), userName: "B", projects: [] };
     const events = [];
     for await (const e of ask(client, askCtx, {
       history: [],

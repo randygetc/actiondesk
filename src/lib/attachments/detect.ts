@@ -41,8 +41,7 @@ export function decodeText(b: Uint8Array): string | null {
 
 export function detectFile(b: Uint8Array): Detected {
   if (b.length === 0) return { ok: false, error: "The file is empty." };
-  if (b.length > MAX_BYTES)
-    return { ok: false, error: SIZE_ERROR };
+  if (b.length > MAX_BYTES) return { ok: false, error: SIZE_ERROR };
 
   // %PDF-
   if (startsWith(b, [0x25, 0x50, 0x44, 0x46, 0x2d]))

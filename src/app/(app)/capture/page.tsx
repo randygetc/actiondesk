@@ -1,6 +1,7 @@
 import { CapturePanel } from "@/components/capture/capture-panel";
 import { requireUser } from "@/lib/auth/user";
 import { isFakeLlm } from "@/lib/llm";
+import { currentWorkspace } from "@/lib/workspace/current";
 
 import {
   discardAttachment,
@@ -11,10 +12,12 @@ import {
 } from "./actions";
 
 export default async function CapturePage() {
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
+  const { current } = await currentWorkspace(supabase, user.id);
   const { data: projects } = await supabase
     .from("projects")
     .select("id, name")
+    .eq("workspace_id", current.id)
     .is("archived_at", null)
     .order("name");
 
