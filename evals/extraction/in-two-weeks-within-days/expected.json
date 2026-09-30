@@ -1,0 +1,16 @@
+[
+  {
+    "title": "Prepare the metrics deck for the retro",
+    "assignee": "me",
+    "due_date": "2026-10-20",
+    "due_time": null,
+    "project_id": "00000000-0000-4000-8000-000000000003"
+  },
+  {
+    "title": "Renew the SSL certificate",
+    "assignee": "me",
+    "due_date": "2026-10-09",
+    "due_time": null,
+    "project_id": "00000000-0000-4000-8000-000000000001"
+  }
+]

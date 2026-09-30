@@ -1,0 +1,7 @@
+[00:00:05] Mark: Okay, let's go through the Q4 Launch blockers.
+[00:00:12] Randy: The payment webhook is still flaky. I'll add retries and alerting by Wednesday.
+[00:00:30] Mark: And the press kit?
+[00:00:34] Joy: I'll finish the press kit Thursday.
+[00:00:41] Mark: Randy, can you also confirm the launch date with marketing today?
+[00:00:45] Randy: Yep, will do.
+[00:01:02] Mark: Cool. Let's meet again on Friday.

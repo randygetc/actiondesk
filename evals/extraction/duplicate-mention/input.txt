@@ -1,0 +1,4 @@
+Standup
+Randy: I'll fix the broken signup form on the website today.
+Ana: I'm blocked on the signup form bug.
+Randy: Yep, the signup form fix is my top priority, will have it done by end of day.

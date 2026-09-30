@@ -1,0 +1,23 @@
+[
+  {
+    "title": "Finish the Q4 Launch checklist",
+    "assignee": "me",
+    "due_date": "2026-10-09",
+    "due_time": null,
+    "project_id": "00000000-0000-4000-8000-000000000003"
+  },
+  {
+    "title": "Reconcile contractor invoices",
+    "assignee": "me",
+    "due_date": "2026-10-31",
+    "due_time": null,
+    "project_id": null
+  },
+  {
+    "title": "Reply to the recruiter",
+    "assignee": "me",
+    "due_date": "2026-10-06",
+    "due_time": null,
+    "project_id": null
+  }
+]
