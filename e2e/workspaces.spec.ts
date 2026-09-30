@@ -4,7 +4,10 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { signInAsNewUser } from "./helpers/auth";
 
-/** Switches via the form post, then reloads and checks the server agrees. */
+/**
+ * Switches the way a user does (no reload): the select must show the new
+ * workspace and the page must follow. Then a reload confirms the cookie.
+ */
 async function switchTo(page: Page, name: string) {
   const value =
     (await page.getByRole("option", { name }).getAttribute("value")) ?? "";
@@ -12,6 +15,9 @@ async function switchTo(page: Page, name: string) {
     page.waitForResponse((r) => r.request().method() === "POST"),
     page.getByLabel("Workspace").selectOption(value),
   ]);
+  // Wait for the page to follow, then check the select didn't snap back.
+  await expect(page.getByTestId("workspace-name")).toHaveText(name);
+  await expect(page.getByLabel("Workspace")).toHaveValue(value);
   await page.reload();
   await expect(page.getByLabel("Workspace")).toHaveValue(value);
 }

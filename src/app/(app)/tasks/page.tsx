@@ -92,7 +92,15 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
   return (
     <div className="flex max-w-2xl flex-col gap-6">
       <div className="flex items-baseline justify-between">
-        <h1 className="text-xl font-semibold">Tasks</h1>
+        <div>
+          <h1 className="text-xl font-semibold">Tasks</h1>
+          <p
+            className="text-sm text-muted-foreground"
+            data-testid="workspace-name"
+          >
+            {current.name}
+          </p>
+        </div>
         <Link
           href={showDone ? "/tasks" : "/tasks?show=done"}
           className="text-sm underline"
