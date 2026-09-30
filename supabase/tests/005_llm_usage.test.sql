@@ -1,5 +1,5 @@
 -- llm_usage: own-row select, append-only (no client writes), log_llm_usage()
--- always writes for the caller, llm_spend_today() sums only the caller's day.
+-- always writes for the caller, llm_spend_recent() sums only the caller's last 24 hours.
 begin;
 \ir helpers/auth.psql
 select plan(19);
@@ -72,28 +72,28 @@ select throws_ok(
   'owner: cannot delete (to reset their cap)'
 );
 
--- llm_spend_today -------------------------------------------------------------
+-- llm_spend_recent (rolling 24 hours; step 2.8) ------------------------------
 
 select tests.clear_authentication();
--- Yesterday's row (written as the table owner) must not count toward today.
+-- A row from 2 days ago (written as the table owner) is outside the window.
 insert into public.llm_usage (user_id, feature, model, cost_usd, outcome, created_at)
   values (:'a', 'extract', 'm', 9, 'ok', now() - interval '2 days');
 select tests.authenticate_as(:'a');
 
 select results_eq(
-  $$ select public.llm_spend_today('Asia/Manila') $$,
+  $$ select public.llm_spend_recent() $$,
   $$ values (0.001234::numeric) $$,
-  'owner: today''s spend counts only today''s own rows'
+  'owner: recent spend counts only the last 24 hours of own rows'
 );
-select throws_ok(
-  $$ select public.llm_spend_today('Mars/Olympus') $$,
-  '22023', null,
-  'an invalid time zone is rejected'
+select is(
+  (select count(*)::int from pg_proc where proname = 'llm_spend_today'),
+  0,
+  'llm_spend_today (time zone based, resettable) is gone'
 );
 
 select tests.authenticate_as(:'b');
 select results_eq(
-  $$ select public.llm_spend_today('UTC') $$,
+  $$ select public.llm_spend_recent() $$,
   $$ values (0.5::numeric) $$,
   'other user: their spend excludes the owner''s rows'
 );
@@ -113,7 +113,7 @@ select throws_ok(
   'anon: cannot log usage'
 );
 select throws_ok(
-  $$ select public.llm_spend_today('UTC') $$,
+  $$ select public.llm_spend_recent() $$,
   '42501', null,
   'anon: cannot read spend'
 );
@@ -136,9 +136,9 @@ select is(
   'RLS is enabled on llm_usage'
 );
 select is(
-  (select prosecdef from pg_proc where oid = 'public.llm_spend_today(text)'::regprocedure),
+  (select prosecdef from pg_proc where oid = 'public.llm_spend_recent()'::regprocedure),
   false,
-  'llm_spend_today is security invoker, so RLS applies'
+  'llm_spend_recent is security invoker, so RLS applies'
 );
 
 select * from finish();

@@ -292,7 +292,22 @@ export type Database = {
         Returns: string;
       };
       is_app_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
-      llm_spend_today: { Args: { p_tz: string }; Returns: number };
+      llm_spend_recent: { Args: Record<PropertyKey, never>; Returns: number };
+      llm_usage_report: {
+        Args: { p_days: number; p_tz: string };
+        Returns: {
+          cached_tokens: number;
+          calls: number;
+          capped: number;
+          cost_usd: number;
+          day: string;
+          failed: number;
+          feature: Database["public"]["Enums"]["llm_feature"];
+          input_tokens: number;
+          output_tokens: number;
+          users: number;
+        }[];
+      };
       log_llm_usage: {
         Args: {
           p_cached_tokens: number;

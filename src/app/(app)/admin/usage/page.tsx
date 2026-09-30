@@ -1,5 +1,4 @@
 import { requireUser } from "@/lib/auth/user";
-import { usageByDay, type UsageRow } from "@/lib/usage-report";
 
 // Admin-only usage report (D-11). RLS decides what rows come back: admins see
 // everyone's usage, anyone else only their own. The is_app_admin() check here
@@ -26,20 +25,13 @@ export default async function UsagePage() {
   }
 
   const tz = profile?.timezone ?? "America/Los_Angeles";
-  // Read the clock at the edge, as the tasks page does.
-  const now = new Date();
-  const since = new Date(now.getTime() - DAYS * 24 * 60 * 60 * 1000);
-  const { data, error } = await supabase
-    .from("llm_usage")
-    .select(
-      "created_at, feature, outcome, cost_usd, input_tokens, output_tokens, cached_tokens, user_id",
-    )
-    .gte("created_at", since.toISOString())
-    .order("created_at", { ascending: false })
-    .limit(10_000);
-
-  const lines = usageByDay((data ?? []) as UsageRow[], tz);
-  const total = lines.reduce((s, l) => s + l.costUsd, 0);
+  // Aggregated in SQL (review #6), so the report can't be truncated by volume.
+  const { data, error } = await supabase.rpc("llm_usage_report", {
+    p_tz: tz,
+    p_days: DAYS,
+  });
+  const lines = data ?? [];
+  const total = lines.reduce((s, l) => s + Number(l.cost_usd), 0);
   const usd = (n: number) => `$${n.toFixed(4)}`;
 
   return (
@@ -80,17 +72,17 @@ export default async function UsagePage() {
                 <td className="text-right">{l.calls}</td>
                 <td className="text-right">{l.users}</td>
                 <td className="text-right">
-                  {l.inputTokens.toLocaleString("en-US")}
+                  {l.input_tokens.toLocaleString("en-US")}
                 </td>
                 <td className="text-right">
-                  {l.cachedTokens.toLocaleString("en-US")}
+                  {l.cached_tokens.toLocaleString("en-US")}
                 </td>
                 <td className="text-right">
-                  {l.outputTokens.toLocaleString("en-US")}
+                  {l.output_tokens.toLocaleString("en-US")}
                 </td>
                 <td className="text-right">{l.capped}</td>
                 <td className="text-right">{l.failed}</td>
-                <td className="text-right">{usd(l.costUsd)}</td>
+                <td className="text-right">{usd(Number(l.cost_usd))}</td>
               </tr>
             ))}
           </tbody>

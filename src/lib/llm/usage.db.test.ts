@@ -1,4 +1,4 @@
-// The daily cap reads the user's own spend through llm_spend_today (RLS).
+// The cap reads the user's own spend in the last 24 hours (llm_spend_recent, RLS).
 // Runs against local Supabase: npm run test:db
 import { randomUUID } from "node:crypto";
 
@@ -41,15 +41,21 @@ beforeAll(async () => {
   if (error) throw error;
 });
 
-it("is reached once today's own spend meets the cap", async () => {
-  expect(await capReached(spender, "Asia/Manila", 0.5)).toBe(false);
-  expect(await capReached(spender, "Asia/Manila", 0.3)).toBe(true);
+it("is reached once the last 24 hours of own spend meets the cap", async () => {
+  expect(await capReached(spender, 0.5)).toBe(false);
+  expect(await capReached(spender, 0.3)).toBe(true);
 });
 
 it("counts only the user's own spend", async () => {
-  expect(await capReached(other, "Asia/Manila", 0.3)).toBe(false);
+  expect(await capReached(other, 0.3)).toBe(false);
 });
 
 it("fails closed when spend can't be read", async () => {
-  expect(await capReached(spender, "Not/AZone", 100)).toBe(true);
+  // A client with no session can't call llm_spend_recent (42501).
+  const anon = createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    { auth: { persistSession: false } },
+  );
+  expect(await capReached(anon, 100)).toBe(true);
 });

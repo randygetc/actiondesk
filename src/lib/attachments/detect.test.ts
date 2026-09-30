@@ -49,7 +49,19 @@ describe("detectFile", () => {
     ]);
     expect(detectFile(zip)).toMatchObject({
       ok: false,
-      error: expect.stringMatching(/zip/),
+      error: expect.stringMatching(/readable Word document/),
+    });
+  });
+
+  it("rejects a .docx zip bomb before anything is inflated (review #5)", () => {
+    // 30 MB of word/document.xml, about 30 KB compressed.
+    const bomb = new Uint8Array(
+      readFileSync(new URL("./fixtures/bomb.docx", import.meta.url)),
+    );
+    expect(bomb.length).toBeLessThan(100_000);
+    expect(detectFile(bomb)).toEqual({
+      ok: false,
+      error: "That Word document is too large to read.",
     });
   });
 

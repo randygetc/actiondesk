@@ -7,6 +7,7 @@ import type { ChatTurn, CreateTaskProposal } from "@/lib/validation/ask";
 
 import type {
   LlmClient,
+  LlmUsage,
   LlmContentBlock,
   LlmMessage,
   LlmMessageParam,
@@ -100,6 +101,8 @@ export async function* ask(
   input: { history: ChatTurn[]; question: string },
   opts: {
     onMessage?: (m: LlmMessage) => void;
+    /** Usage of the call in flight, for charging aborted calls. */
+    onUsage?: (u: LlmUsage) => void;
     onToolError?: (name: string, error: unknown) => void;
     signal?: AbortSignal;
     config?: ModelConfig;
@@ -118,7 +121,8 @@ export async function* ask(
       request(config, messages, round === MAX_ROUNDS),
       opts.signal,
     )) {
-      if (item.type === "text") {
+      if (item.type === "usage") opts.onUsage?.(item.usage);
+      else if (item.type === "text") {
         if (!roundText && wroteText) yield { type: "text", text: "\n\n" };
         roundText = wroteText = true;
         yield { type: "text", text: item.text };

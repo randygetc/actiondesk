@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { log } from "@/lib/log";
 
-import type { LlmMessage } from "./client";
+import type { LlmMessage, LlmUsage } from "./client";
 import { costUsd, isKnownModel } from "./pricing";
 
 type Feature = Database["public"]["Enums"]["llm_feature"];
@@ -14,14 +14,20 @@ type Outcome = Database["public"]["Enums"]["llm_outcome"];
 /** Collects the final message of every API call in one feature run. */
 export function usageMeter(fallbackModel: string) {
   const messages: LlmMessage[] = [];
+  // Usage of the call in flight, charged if it never finishes (review #1).
+  let partial: LlmUsage | undefined;
   const startedAt = performance.now();
   return {
     add(m: LlmMessage) {
       messages.push(m);
+      partial = undefined;
+    },
+    partial(u: LlmUsage) {
+      partial = u;
     },
     summary() {
       // The model that actually answered (a refusal fallback may differ).
-      const model = messages.at(-1)?.model ?? fallbackModel;
+      const model = messages.at(-1)?.model ?? partial?.model ?? fallbackModel;
       let input = 0;
       let output = 0;
       let cached = 0;
@@ -34,6 +40,12 @@ export function usageMeter(fallbackModel: string) {
         cost += costUsd(m.model, u);
         if (!isKnownModel(m.model))
           log.warn("llm.unpriced_model", { model: m.model });
+      }
+      if (partial) {
+        input += partial.input_tokens;
+        output += partial.output_tokens;
+        cached += partial.cache_read_input_tokens;
+        cost += costUsd(partial.model, partial);
       }
       return {
         model,
@@ -97,7 +109,7 @@ export async function recordUsage(
 
 const DEFAULT_DAILY_CAP_USD = 1;
 
-/** Per-user daily cap from LLM_DAILY_CAP_USD (plan §3.9, 2.6); $1 if unset or invalid. */
+/** Per-user cap per rolling 24 hours, from LLM_DAILY_CAP_USD (plan §3.9, 2.6); $1 if unset or invalid. */
 export function dailyCapUsd(): number {
   const raw = process.env.LLM_DAILY_CAP_USD;
   if (raw === undefined || raw === "") return DEFAULT_DAILY_CAP_USD;
@@ -110,19 +122,19 @@ export function dailyCapUsd(): number {
 }
 
 export const CAP_MESSAGE =
-  "You've reached today's AI limit. It resets at midnight.";
+  "You've reached your AI limit for the last 24 hours. Try again later.";
 
 /**
- * True when the user's spend since local midnight has reached the cap. Checked
- * before each call; parallel calls can overshoot by one call's cost (R-14,
- * accepted). Fails closed: if spend can't be read, the call is refused.
+ * True when the user's spend in the last 24 hours has reached the cap. A
+ * rolling window, so no user setting (like time zone) can reset it (review
+ * #2). Checked before each call; parallel calls can still overshoot (R-14).
+ * Fails closed: if spend can't be read, the call is refused.
  */
 export async function capReached(
   supabase: SupabaseClient<Database>,
-  tz: string,
   cap = dailyCapUsd(),
 ): Promise<boolean> {
-  const { data, error } = await supabase.rpc("llm_spend_today", { p_tz: tz });
+  const { data, error } = await supabase.rpc("llm_spend_recent");
   if (error) {
     log.error("llm.cap_check_failed", { code: error.code });
     return true;

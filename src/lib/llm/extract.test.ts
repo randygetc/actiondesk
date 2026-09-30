@@ -6,7 +6,13 @@ import type {
   LlmMessage,
   LlmRequest,
 } from "./client";
-import { extractTasks, type ExtractEvent, type ExtractInput } from "./extract";
+import {
+  extractTasks,
+  MAX_INPUT_TOKENS,
+  NoteTooLargeError,
+  type ExtractEvent,
+  type ExtractInput,
+} from "./extract";
 
 const P1 = "00000000-0000-4000-8000-000000000001";
 
@@ -226,5 +232,37 @@ describe("extractTasks", () => {
       extractTasks(client, input, { onMessage: (m) => seen.push(m.id) }),
     );
     expect(seen).toHaveLength(2);
+  });
+});
+
+describe("PDF input budget (review #4)", () => {
+  const pdfInput = {
+    ...input,
+    note: { kind: "pdf" as const, base64: "JVBERi0=" },
+  };
+
+  it("refuses a PDF over the token budget without calling the model", async () => {
+    const { client, requests } = scripted(message([], "end_turn"));
+    const counting = {
+      ...client,
+      countTokens: async () => MAX_INPUT_TOKENS + 1,
+    };
+    await expect(
+      collect(extractTasks(counting, pdfInput)),
+    ).rejects.toBeInstanceOf(NoteTooLargeError);
+    expect(requests).toHaveLength(0);
+  });
+
+  it("sends a PDF within budget, with a cache breakpoint on the document", async () => {
+    const { client, requests } = scripted(message([], "end_turn"));
+    const counting = { ...client, countTokens: async () => 5_000 };
+    await collect(extractTasks(counting, pdfInput));
+    const doc = (
+      requests[0].messages[0].content as {
+        type: string;
+        cache_control?: unknown;
+      }[]
+    )[0];
+    expect(doc.cache_control).toEqual({ type: "ephemeral" });
   });
 });
