@@ -43,7 +43,9 @@ test("signed-in user can change their time zone, and invalid zones are rejected"
   await page.reload();
   await expect(page.getByLabel("Time zone")).toHaveValue("Europe/Berlin");
 
-  // Bypass the <select> to prove the server rejects an unknown zone.
+  // Bypass the <select> to prove the server rejects an unknown zone. Wait for
+  // hydration first, or React can reset the injected value.
+  await page.waitForLoadState("networkidle");
   await page.getByLabel("Time zone").evaluate((el: HTMLSelectElement) => {
     el.add(new Option("Mars/Olympus_Mons", "Mars/Olympus_Mons"));
     el.value = "Mars/Olympus_Mons";

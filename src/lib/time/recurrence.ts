@@ -2,6 +2,10 @@
  * Preset recurrence (D-6), stored as RRULE bodies without DTSTART. Expansion is
  * done here in local wall-clock time, then converted to UTC (R-8). The DB
  * check constraint on tasks.recurrence mirrors parseRRule.
+ *
+ * A rule may end with ";BYHOUR=h;BYMINUTE=m": the intended local time, in the
+ * task's recurrence_tz. It keeps a 02:30 task at 02:30 after the spring-forward
+ * gap has pushed one occurrence to 03:30 (step 1.8).
  */
 import { Temporal } from "temporal-polyfill";
 
@@ -37,7 +41,9 @@ export const isNth = (n: number) =>
 export const isInterval = (n: number) =>
   Number.isInteger(n) && n >= 2 && n <= 52;
 
-export function toRRule(p: Preset): string {
+export type WallTime = { hour: number; minute: number };
+
+function presetRule(p: Preset): string {
   switch (p.kind) {
     case "daily":
       return "FREQ=DAILY";
@@ -54,10 +60,39 @@ export function toRRule(p: Preset): string {
   }
 }
 
+/** The preset as an RRULE body, with the intended local time when given. */
+export function toRRule(p: Preset, time?: WallTime | null): string {
+  const base = presetRule(p);
+  return time ? `${base};BYHOUR=${time.hour};BYMINUTE=${time.minute}` : base;
+}
+
+// Canonical form only (no zero padding), as in the DB check.
+const TIME_SUFFIX =
+  /;BYHOUR=(0|[1-9]|1[0-9]|2[0-3]);BYMINUTE=(0|[1-9]|[1-5][0-9])$/;
+
+function splitTime(rrule: string): { base: string; time: WallTime | null } {
+  const m = rrule.match(TIME_SUFFIX);
+  return m
+    ? {
+        base: rrule.slice(0, m.index),
+        time: { hour: Number(m[1]), minute: Number(m[2]) },
+      }
+    : { base: rrule, time: null };
+}
+
+/** The intended local time stored in the rule, or null for a rule without one. */
+export function ruleTime(rrule: string): WallTime | null {
+  return parseRRule(rrule) ? splitTime(rrule).time : null;
+}
+
 const DAY = "(MO|TU|WE|TH|FR|SA|SU)";
 
-/** Parses only the preset shapes; anything else is null. */
+/** Parses only the preset shapes (ignoring the time suffix); anything else is null. */
 export function parseRRule(rrule: string): Preset | null {
+  return parsePreset(splitTime(rrule).base);
+}
+
+function parsePreset(rrule: string): Preset | null {
   let m: RegExpMatchArray | null;
   if (rrule === "FREQ=DAILY") return { kind: "daily" };
   if (rrule === "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR") return { kind: "weekdays" };
@@ -158,10 +193,11 @@ function nextDate(p: Preset, date: Temporal.PlainDate): Temporal.PlainDate {
 }
 
 /**
- * Next due instant for a recurring task (D-7, schedule-based): keep the local
- * wall-clock time of `prevDueAt` in `tz` (the task's recurrence_tz, D-5), step
- * through scheduled dates, and return the first that is after both `prevDueAt`
- * and `now`, so overdue recurring tasks don't pile up.
+ * Next due instant for a recurring task (D-7, schedule-based). Uses the rule's
+ * local time (BYHOUR/BYMINUTE), or, for a rule without one, the local time of
+ * `prevDueAt`, in `tz` (the task's recurrence_tz, D-5). Steps through scheduled
+ * dates and returns the first that is after both `prevDueAt` and `now`, so
+ * overdue recurring tasks don't pile up.
  */
 export function nextOccurrence(
   rrule: string,
@@ -173,7 +209,11 @@ export function nextOccurrence(
   if (!preset) throw new Error("Unsupported recurrence rule");
 
   const prev = toZoned(prevDueAt, tz).toPlainDateTime();
-  const time = prev.toPlainTime();
+  const wall = ruleTime(rrule);
+  // Without a stored time, a gap-shifted occurrence would carry its shift forward.
+  const time = wall
+    ? new Temporal.PlainTime(wall.hour, wall.minute)
+    : prev.toPlainTime();
   let date = prev.toPlainDate();
   for (let i = 0; i < 10_000; i++) {
     date = nextDate(preset, date);
