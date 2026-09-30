@@ -188,6 +188,7 @@ export async function* extractTasks(
         opts.onMessage?.(item.message);
         continue;
       }
+      if (item.type !== "block") continue;
       const block = item.block;
       if (block.type !== "tool_use" || block.name !== ADD_TASK_TOOL.name)
         continue;
