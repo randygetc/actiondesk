@@ -11,8 +11,9 @@ export type LlmContentBlock = Anthropic.Beta.Messages.BetaContentBlock;
 export type LlmMessageParam = Anthropic.Beta.Messages.BetaMessageParam;
 export type LlmTool = Anthropic.Beta.Messages.BetaTool;
 
-/** A content block as soon as it completes, then the final message. */
+/** Text as it streams, each content block as it completes, then the final message. */
 export type LlmStreamItem =
+  | { type: "text"; text: string }
   | { type: "block"; block: LlmContentBlock }
   | { type: "message"; message: LlmMessage };
 
@@ -35,9 +36,15 @@ export const anthropicClient: LlmClient = {
   async *stream(request, signal) {
     const s = anthropic().beta.messages.stream(request, { signal });
     for await (const event of s) {
-      if (event.type !== "content_block_stop") continue;
-      const block = s.currentMessage?.content[event.index];
-      if (block) yield { type: "block", block };
+      if (
+        event.type === "content_block_delta" &&
+        event.delta.type === "text_delta"
+      ) {
+        yield { type: "text", text: event.delta.text };
+      } else if (event.type === "content_block_stop") {
+        const block = s.currentMessage?.content[event.index];
+        if (block) yield { type: "block", block };
+      }
     }
     yield { type: "message", message: await s.finalMessage() };
   },
@@ -53,7 +60,10 @@ export function replayClient(messages: LlmMessage[]): LlmClient {
     async *stream() {
       const message = messages[turn++];
       if (!message) throw new Error(`no recorded response for request ${turn}`);
-      for (const block of message.content) yield { type: "block", block };
+      for (const block of message.content) {
+        if (block.type === "text") yield { type: "text", text: block.text };
+        yield { type: "block", block };
+      }
       yield { type: "message", message };
     },
   };

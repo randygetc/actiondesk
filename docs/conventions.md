@@ -152,3 +152,19 @@ Versions: Next 16.3, React 19.2, TypeScript 5.9, Tailwind 4, Zod 4, Vitest 5, @s
 - **e2e and the fake model:** Playwright's own dev server gets `LLM_FAKE=1`. Pages that call the LLM
   set `data-llm="fake|live"`, and their e2e tests skip unless it's `fake`, so a reused local dev
   server never spends API money.
+
+## Ask tools (step 2.5, 2026-09-30)
+- **One tool = one `defineTool()`** in `src/lib/llm/tools/`. Each has a strict JSON schema for the
+  API, a Zod schema that re-checks the model's input, a `describe()` for the UI chip, and a
+  `run(ctx, input)` that gets the request's user-scoped client. There are no other data paths
+  (ADR-0003).
+- **Strict schemas:** list every property in `required` and set `additionalProperties: false`.
+  For a nullable enum use `anyOf: [{ type: "string", enum: [...] }, { type: "null" }]`: the API
+  rejects `enum` on `type: ["string", "null"]`. `tools/tasks.test.ts` checks all of this.
+- **Write tools return a `proposal`** and never touch the DB. The UI's Confirm calls a Server
+  Action that re-validates with the task form schema.
+- **Per-request context** (today's date, projects) goes in the latest user message, so the system
+  prompt and tools stay a stable, cacheable prefix.
+- **Check a new LLM feature live once** through the dev server before opening the PR (about 1 cent).
+  Unit tests with a scripted model can't catch API schema rejections; the first live Ask call
+  returned a 400 that no test had caught.

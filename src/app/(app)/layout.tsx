@@ -1,6 +1,8 @@
 import Link from "next/link";
 
+import { AskPanel } from "@/components/ask/ask-panel";
 import { Button } from "@/components/ui/button";
+import { askStream, confirmCreateTask } from "@/app/(app)/ask/actions";
 import { signOut } from "@/app/auth/signout/actions";
 import { requireUser } from "@/lib/auth/user";
 
@@ -17,7 +19,13 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           <Link href="/projects">Projects</Link>
           <Link href="/settings">Settings</Link>
         </nav>
-        <form action={signOut} className="ml-auto">
+        <div className="ml-auto">
+          <AskPanel
+            askStream={askStream}
+            confirmCreateTask={confirmCreateTask}
+          />
+        </div>
+        <form action={signOut}>
           <Button type="submit" variant="ghost" size="sm">
             Sign out
           </Button>

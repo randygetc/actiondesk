@@ -2,7 +2,7 @@
 
 Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.md.
 
-- **Last updated:** 2026-09-30 (step 2.4: model comparison)
+- **Last updated:** 2026-09-30 (step 2.5: Ask ActionDesk)
 - **Sources:** CLAUDE.md, docs/architecture.md, docs/adr/0001–0005, docs/KICKOFF.md, guardrails/, .claude/
 - **Scope:** Phases 1 and 2 are in full detail. Phase 3 is outlined and gets detailed in step 3.1.
 - **Needs your decision:** the owner items in §7 (risks and gaps in the guardrails). All §6 decisions are made.
@@ -24,8 +24,9 @@ Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.
 | 2.1 | Phase 2 plan + streaming spike | done (PR #12); spike passed (§3.1), no ADR; D-19–D-21 decided |
 | 2.2 | Evals first | done (PR #13); 19 cases **drafted by Claude at the owner's request** (KICKOFF has the owner write them; owner reviews `expected.json`) |
 | 2.3 | Extraction | done (PR #14): live eval 98% on claude-opus-5-5 |
-| 2.4 | Model comparison | PR open on `phase2/model-comparison`: all three 98%; owner chose claude-sonnet-5-5 ($0.0082/case, 2.9 s); see docs/learnings.md |
-| 2.5–2.8 | LLM features | detailed in §3.9; not started |
+| 2.4 | Model comparison | done (PR #15): owner chose claude-sonnet-5-5 |
+| 2.5 | Ask ActionDesk | PR open on `phase2/ask`: 4 tools on the user client, proposal-only create_task, cross-user db test |
+| 2.6–2.8 | LLM features | detailed in §3.9; not started |
 | 3.x | Workspaces, jobs, prod | outline only |
 
 ### 0.1 Phase 1 summary (2026-09-30)

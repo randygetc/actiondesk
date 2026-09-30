@@ -23,4 +23,12 @@ export const EXTRACT_MODEL: ModelConfig = {
   maxTokens: 16_000,
 };
 
+export const ASK_MODEL: ModelConfig = {
+  // Same model as extraction (2.4); low effort suits chat (claude-api docs).
+  model: "claude-sonnet-5-5",
+  effort: "low",
+  fallbacks: true,
+  maxTokens: 8_000,
+};
+
 export const FALLBACK_BETA = "server-side-fallback-2026-07-01";
