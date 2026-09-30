@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { MAX_BYTES, SIZE_ERROR } from "@/lib/attachments/detect";
 import { isValidDate } from "@/lib/time/zones";
 
 import { taskFormSchema } from "./task";
@@ -90,4 +91,4 @@ export const extractAttachmentSchema = z.strictObject({
 /** The upload form's file (review #12). Type is decided later, from the bytes. */
 export const uploadFileSchema = z
   .instanceof(File, { message: "Choose a file first." })
-  .refine((f) => f.size <= 10 * 1024 * 1024, "Files can be at most 10 MB.");
+  .refine((f) => f.size <= MAX_BYTES, SIZE_ERROR);

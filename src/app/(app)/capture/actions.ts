@@ -7,7 +7,6 @@ import { randomUUID } from "node:crypto";
 import type { ActionResult } from "@/lib/action-result";
 import {
   detectFile,
-  MAX_BYTES,
   MIME,
   type FileKind,
 } from "@/lib/attachments/detect";

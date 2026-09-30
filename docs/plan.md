@@ -108,7 +108,6 @@ Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.
 **Open issues carried into Phase 3:**
 - **Owner:**
   - R-14: parallel cap overshoot. Reserve spend before each call, or allow one call in flight per user.
-  - R-22: Vercel's 4.5 MB body limit. An ADR for signed-URL uploads, or a 4 MB limit. **Decide before deploy.**
   - R-23: forged usage rows. An ADR for a server-only write path.
   - R-1 and R-2 from Phase 1.
 - **Carried:**
@@ -511,7 +510,7 @@ Every file imports `server-only`. `client.ts` is the only SDK import (R2).
 
 ### 3.6 Attachments (2.7)
 
-- **Size:** ≤ 10 MB, checked on the server from the uploaded bytes, not a header.
+- **Size:** ≤ 4 MB (D-22; was 10 MB), checked on the server from the uploaded bytes, not a header.
 - **Type** is decided by magic bytes. The filename and the browser's MIME type are ignored:
   - PDF: `%PDF-`;
   - .docx: `PK\x03\x04` plus a `word/document.xml` entry;
@@ -712,6 +711,7 @@ On 2026-09-29 the owner accepted every recommendation, and chose to cut the 1.6 
 | D-19 | When `llm_usage` logging starts (KICKOFF puts it at 2.6) | 2.3, so every live call is logged; 2.6 keeps the cap, caching and admin page | Accepted (2026-09-30) |
 | D-20 | Due-date format from extraction | Local `due_date` + optional `due_time`, converted by `src/lib/time` (not ISO with offset, which models get wrong across DST) | Accepted (2026-09-30) |
 | D-21 | Retention of uploaded files | Delete when the review is saved or discarded; Phase 3 cron removes leftovers; only `source_quote` stays | Accepted (2026-09-30) |
+| D-22 | Uploads over Vercel's 4.5 MB request body limit (R-22) | Option A (proposed ADR 0007: browser uploads to a signed Storage URL) or Option B (a 4 MB limit, no architecture change) | Option B, 4 MB (2026-09-30). ADR 0007 was not adopted; revisit if users hit the limit |
 
 ---
 
@@ -742,8 +742,8 @@ Items marked **(owner)** involve locked files that I can't and won't change.
 | R-19 | ~~System prompt below the minimum cacheable length~~ | Measured at 2.6: the extraction prefix is 1,407 tokens (Sonnet 5.5's minimum is 512), with 18 of 19 eval calls reading it. Ask hits the cache as well. Re-check if the model changes (Haiku's minimum is 4,096). |
 | R-20 | An attachment is orphaned if the review tab is closed before save or discard (D-21). | Phase 3 cron deletes attachments older than 24 h; until then, a documented cleanup query. |
 | R-21 | `LLM_FAKE` (e2e fake model) must never be active in production. | Honored only when `NODE_ENV !== 'production'`, with a unit test; not set in Vercel. |
-| R-22 | Vercel caps a function's request body at 4.5 MB, so uploads between 4.5 and 10 MB fail in production. They work locally and in `next start`. | Before deploying (3.x): propose an ADR for browser uploads to a signed Storage URL created by a Server Action. That's a browser-side write, which ADR-0004 doesn't allow today. Or lower the limit to 4 MB. Until then the UI says so if an upload fails. |
+| R-22 | ~~Vercel's 4.5 MB request body cap vs 10 MB uploads~~ | Resolved by D-22: attachments are capped at 4 MB (app, table check and bucket). |
 | R-23 **(owner)** | Users can write fake usage rows for themselves with `log_llm_usage` (review #6). They can't lower their cap, but they can add noise to the admin report. The report is now aggregated in SQL, so it can't be truncated. | Move usage writes off the user's session to a server-only path. That uses the admin client, so it needs an ADR (R3). |
-| R-24 | The 11 MB body limit applies to every Server Action and proxied request, not only uploads (review #9). | Goes away with the R-22 decision (signed-URL uploads, or a 4 MB limit). |
+| R-24 | ~~The 11 MB body limit applies to all actions~~ | Resolved with D-22: the Server Action limit is 4.5 MB (a 4 MB file plus overhead), and the proxy override is gone. |
 | R-25 | A client can forge earlier assistant turns in its own chat history (review #10). The impact stays with that user: tools re-run and writes are proposal-only. | Accepted for Phase 2. Keep history server-side if chat persistence is added. |
 | R-26 | Project names and the display name go into prompts outside the note tag (review #11). This is harmless while each user sees only their own data. | Phase 3 (workspaces): wrap every member-written list in data framing, and add Ask injection cases for other members' titles and project names. |

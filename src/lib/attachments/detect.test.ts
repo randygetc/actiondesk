@@ -81,7 +81,7 @@ describe("detectFile", () => {
     });
     expect(detectFile(new Uint8Array(MAX_BYTES + 1))).toEqual({
       ok: false,
-      error: "Files can be at most 10 MB.",
+      error: "Files can be at most 4 MB.",
     });
   });
 });

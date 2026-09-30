@@ -72,10 +72,12 @@ test("a renamed executable is rejected by its bytes, not its name", async ({
   expect(await attachmentCount()).toBe(0);
 });
 
-test("a file over 10 MB is rejected by the server", async ({ page }) => {
-  await upload(page, "huge.txt", Buffer.alloc(10.5 * 1024 * 1024, "a"));
+test("a file over 4 MB is rejected by the server", async ({ page }) => {
+  // 4.2 MB: over the limit, but still under the 4.5 MB request body limit, so
+  // the server action itself does the rejecting.
+  await upload(page, "huge.txt", Buffer.alloc(4.2 * 1024 * 1024, "a"));
   await expect(
-    page.getByRole("alert").filter({ hasText: "at most 10 MB" }),
+    page.getByRole("alert").filter({ hasText: "at most 4 MB" }),
   ).toBeVisible();
   expect(await attachmentCount()).toBe(0);
 });
