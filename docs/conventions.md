@@ -239,3 +239,15 @@ Versions: Next 16.3, React 19.2, TypeScript 5.9, Tailwind 4, Zod 4, Vitest 5, @s
   workspace switcher bug (#24) was hidden by a reload.
 - **Two users:** make a second context with `browser.newContext({ baseURL })` and sign each in with
   `signInAsNewUser`. Invite tests need no fake model, so they run locally too.
+
+## Realtime (step 3.4, 2026-09-30)
+- **One private Broadcast channel per workspace,** `workspace:<id>`. The DB triggers
+  (`broadcast_workspace_change`, security definer) send `{table, op, id}`, never content. Members of
+  any role may receive (RLS on `realtime.messages` via `my_workspaces`), and nobody may send.
+- **The browser refreshes and never merges rows.** `WorkspaceLive` calls `router.refresh()` (debounced),
+  so the server re-reads through RLS. That also makes optimistic updates plus echoes duplicate-free.
+  After a reconnect or when the tab becomes visible, it refreshes once to catch up.
+- **To add a table to live updates,** give it `workspace_id` and the same trigger.
+- **Testing:** the security property (members yes, outsiders no) is a db test against the real Realtime
+  server (`src/lib/db/realtime.db.test.ts`). In e2e, `context.setOffline()` does **not** drop an open
+  WebSocket. Use `context.routeWebSocket` to really disconnect.
