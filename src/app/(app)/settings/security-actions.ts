@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import type { ActionResult } from "@/lib/action-result";
 import { MFA_MESSAGES, mfaStatus, stepUp, verifyCode } from "@/lib/auth/mfa";
-import { log } from "@/lib/log";
+import { requestLog } from "@/lib/request-log";
 import { createClient } from "@/lib/supabase/server";
 import { totpCodeSchema } from "@/lib/validation/workspace";
 
@@ -42,7 +42,7 @@ export async function startTotp(): Promise<Enrollment> {
     friendlyName: "Authenticator app",
   });
   if (error || !data) {
-    log.error("mfa.enroll_failed", {
+    (await requestLog()).error("mfa.enroll_failed", {
       userId: user.id,
       code: error?.code ?? null,
     });
@@ -80,7 +80,7 @@ export async function confirmTotp(
       error: MFA_MESSAGES.badCode,
       fieldErrors: { code: [MFA_MESSAGES.badCode] },
     };
-  log.info("mfa.enrolled", { userId: user.id });
+  (await requestLog()).info("mfa.enrolled", { userId: user.id });
   revalidatePath("/settings");
   return { ok: true, data: undefined };
 }
@@ -102,13 +102,13 @@ export async function turnOffTotp(
 
   const { error } = await supabase.auth.mfa.unenroll({ factorId });
   if (error) {
-    log.error("mfa.unenroll_failed", {
+    (await requestLog()).error("mfa.unenroll_failed", {
       userId: user.id,
       code: error.code ?? null,
     });
     return { ok: false, error: "Couldn't turn it off. Try again." };
   }
-  log.info("mfa.unenrolled", { userId: user.id });
+  (await requestLog()).info("mfa.unenrolled", { userId: user.id });
   revalidatePath("/settings");
   return { ok: true, data: undefined };
 }

@@ -1,3 +1,5 @@
+// Sentry v11: the build helper lives in its own entry point.
+import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -13,7 +15,15 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "4.5mb",
     },
   },
-
 };
 
-export default nextConfig;
+// Step 3.8: Sentry build integration. Source maps are uploaded (for readable
+// stack traces) only when SENTRY_AUTH_TOKEN, SENTRY_ORG and SENTRY_PROJECT are
+// set; otherwise the build is unchanged apart from the SDK.
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+});

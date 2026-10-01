@@ -6,6 +6,7 @@ import type { z } from "zod";
 
 import type { ActionResult } from "@/lib/action-result";
 import { log } from "@/lib/log";
+import { requestLog } from "@/lib/request-log";
 import { createClient } from "@/lib/supabase/server";
 import { currentWorkspace, VIEW_ONLY_MESSAGE } from "@/lib/workspace/current";
 import {
@@ -102,7 +103,10 @@ export async function createProject(
     .single();
   if (error) return dbError(error.code, user.id, "project.create_failed");
 
-  log.info("project.created", { userId: user.id, projectId: data.id });
+  (await requestLog()).info("project.created", {
+    userId: user.id,
+    projectId: data.id,
+  });
   revalidate();
   return { ok: true, data: { id: data.id } };
 }
@@ -129,7 +133,10 @@ export async function renameProject(
   if (error) return dbError(error.code, user.id, "project.rename_failed");
   if (data.length === 0) return missingOrViewOnly(supabase, parsed.data.id);
 
-  log.info("project.renamed", { userId: user.id, projectId: parsed.data.id });
+  (await requestLog()).info("project.renamed", {
+    userId: user.id,
+    projectId: parsed.data.id,
+  });
   revalidate(parsed.data.id);
   return { ok: true, data: { id: parsed.data.id } };
 }
@@ -158,10 +165,13 @@ export async function archiveProject(
   if (error) return dbError(error.code, user.id, "project.archive_failed");
   if (data.length === 0) return missingOrViewOnly(supabase, parsed.data.id);
 
-  log.info(parsed.data.archived ? "project.archived" : "project.restored", {
-    userId: user.id,
-    projectId: parsed.data.id,
-  });
+  (await requestLog()).info(
+    parsed.data.archived ? "project.archived" : "project.restored",
+    {
+      userId: user.id,
+      projectId: parsed.data.id,
+    },
+  );
   revalidate(parsed.data.id);
   return { ok: true, data: { id: parsed.data.id } };
 }
@@ -185,7 +195,10 @@ export async function deleteProject(
   if (error) return dbError(error.code, user.id, "project.delete_failed");
   if (data.length === 0) return missingOrViewOnly(supabase, parsed.data.id);
 
-  log.info("project.deleted", { userId: user.id, projectId: parsed.data.id });
+  (await requestLog()).info("project.deleted", {
+    userId: user.id,
+    projectId: parsed.data.id,
+  });
   revalidate();
   redirect("/projects");
 }

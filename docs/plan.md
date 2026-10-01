@@ -2,7 +2,7 @@
 
 Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.md.
 
-- **Last updated:** 2026-10-01 (step 3.7: performance)
+- **Last updated:** 2026-10-01 (step 3.8: observability)
 - **Sources:** CLAUDE.md, docs/architecture.md, docs/adr/0001–0005, docs/KICKOFF.md, guardrails/, .claude/
 - **Scope:** Phases 1 and 2 are done. Phase 3 is detailed in §4 (3.1).
 - **Needs your decision:** the owner items in §7 (risks and gaps in the guardrails). All §6 decisions are made.
@@ -36,8 +36,9 @@ Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.
 | 3.4 | Realtime | done (PR #26) |
 | 3.5 | MFA | done (PR #27) |
 | 3.6 | Weekly digest | done (PR #28) |
-| 3.7 | Performance at 100k | PR open on `phase3/performance`: 2 indexes, date code 10× faster, tasks page queried per group (owner decision); report in docs/performance.md |
-| 3.8–3.12 | Workspaces, jobs, prod | detailed in §4; not started |
+| 3.7 | Performance at 100k | done (PR #29) |
+| 3.8 | Observability | PR open on `phase3/observability`: Sentry (browser, server, edge, digest function), request ids, request-bound logger, logged errors reported, `/api/health` |
+| 3.9–3.12 | Workspaces, jobs, prod | detailed in §4; not started |
 
 ### 0.1 Phase 1 summary (2026-09-30)
 
@@ -835,3 +836,5 @@ Items marked **(owner)** involve locked files that I can't and won't change.
 | R-33 | The digest needs per-environment setup that isn't in migrations. | 3.10 runbook: Vault secrets `digest_function_url` and `service_role_key` (until they're set, the cron job does nothing); function secrets `ANTHROPIC_API_KEY`, `RESEND_API_KEY`, `EMAIL_TRANSPORT=resend`, `DIGEST_FROM`, `APP_URL`, `LLM_DAILY_CAP_USD`; Resend sending-domain verification; `supabase functions deploy digest`. |
 | R-34 | The scheduled digest isn't counted against users' AI caps (one call per member per week; logged as `digest`). The test button is counted. | Revisit with real usage at 3.7. A per-workspace cap (D-25) would cover it. |
 | R-35 | The 20-user stress test of `/tasks` has a p95 of 2.0 s on one local Node process (steady 10 req/s: 230 ms). | Re-run k6 against the first Vercel preview (3.10), where concurrent requests don't share one process. |
+| R-36 | Readable production stack traces need source maps uploaded at build: `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and `SENTRY_PROJECT` in Vercel. The digest function needs `SENTRY_DSN` (and `SENTRY_ENVIRONMENT`) as function secrets. | 3.10 runbook. Without them, errors still arrive but with minified traces, or none at all from the function. |
+| R-37 | The uptime check needs a public URL. | 3.10: an uptime monitor (e.g. Sentry Uptime) on `https://<prod>/api/health`: it alerts on non-200, and the response says which dependency (auth, db) failed. |
