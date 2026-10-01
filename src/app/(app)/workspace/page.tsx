@@ -4,6 +4,7 @@ import {
   LeaveForm,
   MemberControls,
   NameForm,
+  TestDigestForm,
 } from "@/components/workspace/forms";
 import { Button } from "@/components/ui/button";
 import { mfaStatus } from "@/lib/auth/mfa";
@@ -18,6 +19,7 @@ import {
   removeMember,
   renameWorkspace,
   revokeInvite,
+  sendTestDigest,
 } from "./actions";
 
 const ROLE_LABELS = {
@@ -135,6 +137,20 @@ export default async function WorkspacePage() {
               ))}
             </ul>
           ) : null}
+        </section>
+      ) : null}
+
+      {isOwner ? (
+        <section className="flex flex-col gap-2" aria-labelledby="digest">
+          <h2 id="digest" className="font-medium">
+            Weekly digest
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Every member gets an AI summary of the week on Monday at 8am in
+            their own time zone: what got done, what&apos;s overdue, what&apos;s coming
+            up.
+          </p>
+          <TestDigestForm action={sendTestDigest} />
         </section>
       ) : null}
 

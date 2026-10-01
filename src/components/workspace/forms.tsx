@@ -272,3 +272,28 @@ export function DeleteWorkspaceForm({
     </details>
   );
 }
+
+/** Owners: send yourself this week's digest now (step 3.6). */
+export function TestDigestForm({
+  action,
+}: {
+  action: (
+    prev: ActionResult<{ message: string }> | null,
+  ) => Promise<ActionResult<{ message: string }>>;
+}) {
+  const [state, formAction, pending] = useActionState(action, null);
+  return (
+    <form action={formAction} className="flex flex-col gap-2 text-sm">
+      <div>
+        <Button type="submit" variant="outline" disabled={pending}>
+          {pending ? "Sending…" : "Send me a test digest now"}
+        </Button>
+      </div>
+      {state?.ok ? (
+        <p role="status">{state.data.message}</p>
+      ) : (
+        <FormError state={state} />
+      )}
+    </form>
+  );
+}

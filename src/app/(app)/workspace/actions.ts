@@ -343,3 +343,51 @@ export async function deleteWorkspace(
   refresh();
   redirect("/tasks");
 }
+
+const DIGEST_MESSAGES: Record<string, string> = {
+  sent: "Sent. Check your inbox.",
+  skipped: "Nothing to report this week, so no email was sent.",
+  capped:
+    "You've reached your AI limit for the last 24 hours. Try again later.",
+  forbidden: "Only an owner can send a test digest.",
+};
+
+/**
+ * "Send me a test digest now" (step 3.6). Calls the digest Edge Function
+ * through the user's client, so it carries the user's own token; the function
+ * checks ownership and the AI cap with that token and emails only the caller.
+ */
+export async function sendTestDigest(): Promise<
+  ActionResult<{ message: string }>
+> {
+  const { supabase, user } = await getUserClient();
+  if (!user) return signedOut;
+  const { current } = await currentWorkspace(supabase, user.id);
+  if (current.role !== "owner")
+    return { ok: false, error: DIGEST_MESSAGES.forbidden };
+
+  const { data, error } = await supabase.functions.invoke<{
+    status?: string;
+    error?: string;
+  }>("digest", { body: { mode: "test", workspace_id: current.id } });
+  if (error || !data?.status) {
+    // FunctionsHttpError carries the response; map known refusals.
+    const reason =
+      error && "context" in error && error.context instanceof Response
+        ? ((await error.context.json().catch(() => ({}))) as { error?: string })
+            .error
+        : undefined;
+    log.error("digest.test_failed", {
+      userId: user.id,
+      reason: reason ?? null,
+    });
+    return {
+      ok: false,
+      error: (reason && DIGEST_MESSAGES[reason]) || failed.error,
+    };
+  }
+  return {
+    ok: true,
+    data: { message: DIGEST_MESSAGES[data.status] ?? DIGEST_MESSAGES.sent },
+  };
+}

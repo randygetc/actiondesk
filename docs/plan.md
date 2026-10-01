@@ -2,7 +2,7 @@
 
 Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.md.
 
-- **Last updated:** 2026-09-30 (step 3.5: MFA)
+- **Last updated:** 2026-10-01 (step 3.6: weekly digest)
 - **Sources:** CLAUDE.md, docs/architecture.md, docs/adr/0001–0005, docs/KICKOFF.md, guardrails/, .claude/
 - **Scope:** Phases 1 and 2 are done. Phase 3 is detailed in §4 (3.1).
 - **Needs your decision:** the owner items in §7 (risks and gaps in the guardrails). All §6 decisions are made.
@@ -34,8 +34,9 @@ Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.
 | 3.2 | Migrate to workspaces | done (PRs #23, #24) |
 | 3.3 | Invites | done (PR #25) |
 | 3.4 | Realtime | done (PR #26) |
-| 3.5 | MFA | PR open on `phase3/mfa`: TOTP in Settings → Security; removing a member and deleting a workspace need aal2 (RLS / delete_workspace); step-up prompt |
-| 3.6–3.12 | Workspaces, jobs, prod | detailed in §4; not started |
+| 3.5 | MFA | done (PR #27) |
+| 3.6 | Weekly digest | PR open on `phase3/digest`: hourly cron → `digest` Edge Function; Monday 08:00 per recipient; no resend; empty weeks skipped; usage logged; test-digest button |
+| 3.7–3.12 | Workspaces, jobs, prod | detailed in §4; not started |
 
 ### 0.1 Phase 1 summary (2026-09-30)
 
@@ -786,6 +787,8 @@ On 2026-09-29 the owner accepted every recommendation, and chose to cut the 1.6 
 | D-23 | How the current workspace is chosen | A header switcher stored in a cookie, validated against membership on every request, defaulting to Personal; URLs unchanged | Accepted (2026-09-30) |
 | D-24 | Move attachments to workspace storage folders (outline step 6) | Keep them per-user: they're short-lived review inputs (D-21); saved tasks go into the current workspace | Accepted (2026-09-30); resolves R-16 |
 | D-25 | AI cap per user or per workspace | Per user for now (rolling 24 h); `llm_usage.workspace_id` for reporting; revisit at 3.6 | Accepted (2026-09-30) |
+| D-26 | Email provider for the digest | Resend (HTTPS API, idempotency keys); Mailpit locally | Accepted (2026-10-01) |
+| D-27 | Digest recipients | Every member, each at Monday 08:00 in their own time zone | Accepted (2026-10-01) |
 
 ---
 
@@ -827,3 +830,5 @@ Items marked **(owner)** involve locked files that I can't and won't change.
 | R-30 | A signed-out invitee's token passes through `/login?next=/invite/<token>` and the OAuth redirect, so it can appear in auth logs. | Accepted: a token works once, only for the invited email (D-16), and expires in 7 days. If needed, park it in a short-lived httpOnly cookie before login. |
 | R-31 | Every task change re-renders every open page in that workspace (`router.refresh()`, debounced by 250 ms). Cheap now; at the 3.7 scale a burst could cost many server renders. | Measure at 3.7. If it matters, send changed rows through RLS-checked reads instead of full refreshes. |
 | R-32 | TOTP is enabled in `supabase/config.toml` for local and CI only. In prod it's a dashboard setting. | Add to the 3.10 deploy runbook: enable TOTP (enroll + verify) in the prod project before shipping, or owners can't delete workspaces or remove members. |
+| R-33 | The digest needs per-environment setup that isn't in migrations. | 3.10 runbook: Vault secrets `digest_function_url` and `service_role_key` (until they're set, the cron job does nothing); function secrets `ANTHROPIC_API_KEY`, `RESEND_API_KEY`, `EMAIL_TRANSPORT=resend`, `DIGEST_FROM`, `APP_URL`, `LLM_DAILY_CAP_USD`; Resend sending-domain verification; `supabase functions deploy digest`. |
+| R-34 | The scheduled digest isn't counted against users' AI caps (one call per member per week; logged as `digest`). The test button is counted. | Revisit with real usage at 3.7. A per-workspace cap (D-25) would cover it. |
