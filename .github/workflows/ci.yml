@@ -46,6 +46,13 @@ jobs:
       - name: Evals (recorded, no key)
         run: npm run eval
 
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.1.4 # matches the local edge runtime
+
+      - name: Type-check Edge Functions
+        run: deno check --config supabase/functions/deno.json supabase/functions/digest/index.ts
+
       - uses: supabase/setup-cli@v1
         with:
           version: 2.118.0

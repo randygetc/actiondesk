@@ -264,3 +264,18 @@ Versions: Next 16.3, React 19.2, TypeScript 5.9, Tailwind 4, Zod 4, Vitest 5, @s
 - **e2e:** `e2e/helpers/totp.ts` computes codes (checked against the RFC 6238 test vectors). Enrolling
   upgrades the current session to aal2, so use `signIn(email, password)` in a new context for an aal1
   session. Don't reuse a code in the same 30 s window (`freshCode`).
+
+## Edge Functions (step 3.6, 2026-10-01)
+- **Layout:** `supabase/functions/<name>/index.ts` (Deno), with shared pure code in
+  `supabase/functions/_shared/`, imports mapped in `supabase/functions/deno.json` and pinned in
+  `deno.lock`. `_shared/*.ts` imports only `zod`, so Vitest tests it (`_shared/**/*.test.ts` is in the
+  unit project); Deno code imports it with the `.ts` extension. CI runs `deno check`.
+- **Callers check themselves** (`verify_jwt = false`): the scheduled path needs the exact service key;
+  user paths build a client from the caller's `Authorization` header and check membership and the
+  cap with it, never with the admin client.
+- **The admin client** is allowed here (ADR-0003), but every data query is one workspace's, through a
+  `service_role`-only SQL function (`digest_data`).
+- **Local:** `supabase functions serve --env-file supabase/functions/.env` (gitignored). Email goes to
+  Mailpit at http://127.0.0.1:54324. Cron calls the function only once the Vault secrets exist.
+- **Duplication with src/ is deliberate and guarded** (R-7): for example, the digest's price table has a
+  unit test against `src/lib/llm/pricing.ts`.
