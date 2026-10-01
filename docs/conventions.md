@@ -279,3 +279,15 @@ Versions: Next 16.3, React 19.2, TypeScript 5.9, Tailwind 4, Zod 4, Vitest 5, @s
   Mailpit at http://127.0.0.1:54324. Cron calls the function only once the Vault secrets exist.
 - **Duplication with src/ is deliberate and guarded** (R-7): for example, the digest's price table has a
   unit test against `src/lib/llm/pricing.ts`.
+
+## Performance work (step 3.7, 2026-10-01)
+- **Measure as a signed-in user:** `supabase/perf/measure.py` runs EXPLAIN ANALYZE under role
+  `authenticated` with JWT claims, so RLS is included. Add a query there before optimizing it.
+- **Keep a change only if the numbers move,** and record before/after in docs/performance.md. Revert
+  what doesn't help (the trigram index and the per-request memoization were both reverted).
+- **Lists query only what they render:** per-group queries with a limit and an exact count. Never load
+  everything and group in the browser or on the server. No silent truncation: show the count.
+- **In per-row code, reuse formatters** (`Intl.DateTimeFormat` is cached per zone in `zones.ts`).
+  Keep Temporal for conversions (`toUtc`), not for per-row formatting.
+- **Load tests run against `next start`,** never `next dev`. Use the stress ramp for capacity and
+  `RATE=n` for realistic latency.

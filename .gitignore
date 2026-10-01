@@ -46,3 +46,6 @@ next-env.d.ts
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Step 3.7: generated EXPLAIN output (docs/performance.md quotes the key lines)
+supabase/perf/plans/

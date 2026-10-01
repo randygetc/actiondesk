@@ -87,3 +87,41 @@ test("completing a recurring task creates exactly one next occurrence", async ({
   ).toHaveCount(1);
   await expect(page.getByRole("link", { name: "Standup" })).toHaveCount(2);
 });
+
+test("long groups show the first 50 with Show all; every group appears with its count", async ({
+  context,
+  baseURL,
+  page,
+}) => {
+  const { supabase, userId } = await signInAsNewUser(context, baseURL!);
+  const { data: ws } = await supabase
+    .from("workspace_members")
+    .select("workspace_id")
+    .eq("user_id", userId)
+    .single();
+  const inAMonth = new Date(Date.now() + 30 * 86_400_000).toISOString();
+  const { error } = await supabase.from("tasks").insert([
+    ...Array.from({ length: 55 }, (_, i) => ({
+      workspace_id: ws!.workspace_id,
+      title: `Later task ${i + 1}`,
+      due_at: inAMonth,
+    })),
+    ...Array.from({ length: 3 }, (_, i) => ({
+      workspace_id: ws!.workspace_id,
+      title: `Someday task ${i + 1}`,
+    })),
+  ]);
+  expect(error).toBeNull();
+
+  await page.goto("/tasks");
+  const later = page.getByRole("region", { name: "Later" });
+  await expect(later.getByRole("listitem")).toHaveCount(50);
+  await expect(
+    page.getByRole("region", { name: "No date" }).getByRole("listitem"),
+  ).toHaveCount(3);
+
+  await later.getByRole("link", { name: "Show all (55)" }).click();
+  await expect(
+    page.getByRole("region", { name: "Later" }).getByRole("listitem"),
+  ).toHaveCount(55);
+});

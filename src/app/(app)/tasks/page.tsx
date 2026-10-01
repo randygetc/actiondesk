@@ -8,7 +8,12 @@ import { QuickAddForm } from "@/components/tasks/quick-add-form";
 import { TaskRow } from "@/components/tasks/task-row";
 import type { TaskRowData } from "@/components/tasks/types";
 import { requireUser } from "@/lib/auth/user";
-import { GROUP_LABELS, groupTasks } from "@/lib/time/grouping";
+import {
+  GROUP_LABELS,
+  GROUP_ORDER,
+  groupBounds,
+  type Group,
+} from "@/lib/time/grouping";
 import { END_OF_DAY, toLocalParts } from "@/lib/time/zones";
 import { taskIdSchema } from "@/lib/validation/task";
 import { canEdit, currentWorkspace } from "@/lib/workspace/current";
@@ -24,9 +29,15 @@ import {
 const TASK_COLUMNS =
   "id, title, notes, status, priority, due_at, recurrence, project_id, project:projects(id, name)";
 
+/** Rows per group unless the user asks for all (step 3.7: rendering is the cost). */
+const GROUP_LIMIT = 50;
+const ALL_LIMIT = 500;
+
 export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
   const params = await searchParams;
   const showDone = params.show === "done";
+  const showAll = params.all === "1";
+  const limit = showAll ? ALL_LIMIT : GROUP_LIMIT;
   const { supabase, user } = await requireUser();
 
   const { data: profile } = await supabase
@@ -40,30 +51,85 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
   // The only clock read on this page; grouping itself is pure (plan §1).
   const now = new Date();
 
-  // RLS would return every workspace the user belongs to; show the current one.
-  let query = supabase
-    .from("tasks")
-    .select(TASK_COLUMNS)
-    .eq("workspace_id", current.id)
-    .order("due_at", { nullsFirst: false });
-  if (!showDone) query = query.neq("status", "done");
-  const { data: tasks, error } = await query.limit(500);
-  if (error) throw new Error("Couldn't load tasks.");
+  // One small query per group (step 3.7): each reads only its own due_at range
+  // through the open-tasks index, with an exact count for "Show all". Filtering
+  // by the current workspace narrows what RLS allows (all the user's workspaces).
+  const { todayEnd, weekEnd } = groupBounds(now, tz);
+  const open = () =>
+    supabase
+      .from("tasks")
+      .select(TASK_COLUMNS, { count: "exact" })
+      .eq("workspace_id", current.id)
+      .neq("status", "done");
+  const ranges: Record<Group, ReturnType<typeof open>> = {
+    overdue: open().lt("due_at", now.toISOString()).order("due_at"),
+    today: open()
+      .gte("due_at", now.toISOString())
+      .lt("due_at", todayEnd.toISOString())
+      .order("due_at"),
+    thisWeek: open()
+      .gte("due_at", todayEnd.toISOString())
+      .lt("due_at", weekEnd.toISOString())
+      .order("due_at"),
+    later: open().gte("due_at", weekEnd.toISOString()).order("due_at"),
+    noDate: open().is("due_at", null).order("created_at"),
+  };
+  const [doneResult, ...results] = await Promise.all([
+    showDone
+      ? supabase
+          .from("tasks")
+          .select(TASK_COLUMNS, { count: "exact" })
+          .eq("workspace_id", current.id)
+          .eq("status", "done")
+          .order("completed_at", { ascending: false })
+          .limit(limit)
+      : Promise.resolve(null),
+    ...GROUP_ORDER.map((g) => ranges[g].limit(limit)),
+  ]);
+  if (results.some((r) => r.error) || doneResult?.error)
+    throw new Error("Couldn't load tasks.");
+  const groups = GROUP_ORDER.map((group, i) => ({
+    group,
+    tasks: results[i].data ?? [],
+    total: results[i].count ?? 0,
+  })).filter((g) => g.total > 0);
+  const done = doneResult?.data ?? [];
+  const doneTotal = doneResult?.count ?? 0;
 
-  const { groups, done } = groupTasks(tasks, now, tz);
   const withParams = (extra: Record<string, string>) => {
     const q = new URLSearchParams({
       ...(showDone ? { show: "done" } : {}),
+      ...(showAll ? { all: "1" } : {}),
       ...extra,
     });
     const s = q.toString();
     return s ? `/tasks?${s}` : "/tasks";
   };
+  const more = (shown: number, total: number) =>
+    total > shown ? (
+      showAll ? (
+        <p className="text-sm text-muted-foreground">
+          Showing the first {shown} of {total}.
+        </p>
+      ) : (
+        <Link href={withParams({ all: "1" })} className="text-sm underline">
+          Show all ({total})
+        </Link>
+      )
+    ) : null;
 
   const editId = taskIdSchema.safeParse(params.edit);
+  // Loaded by id: the task may be beyond the first rows of its group.
   const editing =
     editId.success && editable
-      ? tasks.find((t) => t.id === editId.data)
+      ? ((
+          await supabase
+            .from("tasks")
+            .select(TASK_COLUMNS)
+            .eq("id", editId.data)
+            .eq("workspace_id", current.id)
+            .maybeSingle()
+        ).data ?? undefined)
       : undefined;
   const { data: projects } = editing
     ? await supabase
@@ -123,7 +189,7 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
         </p>
       ) : null}
 
-      {groups.map(({ group, tasks }) => (
+      {groups.map(({ group, tasks, total }) => (
         <section
           key={group}
           aria-labelledby={`group-${group}`}
@@ -136,6 +202,7 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
             {GROUP_LABELS[group]}
           </h2>
           <ul className="divide-y rounded-md border">{tasks.map(row)}</ul>
+          {more(tasks.length, total)}
         </section>
       ))}
 
@@ -150,7 +217,10 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
           {done.length === 0 ? (
             <p className="text-sm text-muted-foreground">No completed tasks.</p>
           ) : (
-            <ul className="divide-y rounded-md border">{done.map(row)}</ul>
+            <>
+              <ul className="divide-y rounded-md border">{done.map(row)}</ul>
+              {more(done.length, doneTotal)}
+            </>
           )}
         </section>
       ) : null}
