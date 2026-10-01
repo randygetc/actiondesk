@@ -34,9 +34,25 @@ function write(level: Level, event: string, fields: LogFields = {}) {
   else console.log(line);
 }
 
-export const log = {
-  debug: (event: string, fields?: LogFields) => write("debug", event, fields),
-  info: (event: string, fields?: LogFields) => write("info", event, fields),
-  warn: (event: string, fields?: LogFields) => write("warn", event, fields),
-  error: (event: string, fields?: LogFields) => write("error", event, fields),
+export type Logger = {
+  debug: (event: string, fields?: LogFields) => void;
+  info: (event: string, fields?: LogFields) => void;
+  warn: (event: string, fields?: LogFields) => void;
+  error: (event: string, fields?: LogFields) => void;
+  /** A child logger that adds `bound` to every line (call-site fields win). */
+  with: (bound: LogFields) => Logger;
 };
+
+function make(bound: LogFields): Logger {
+  const at = (level: Level) => (event: string, fields?: LogFields) =>
+    write(level, event, { ...bound, ...fields });
+  return {
+    debug: at("debug"),
+    info: at("info"),
+    warn: at("warn"),
+    error: at("error"),
+    with: (more) => make({ ...bound, ...more }),
+  };
+}
+
+export const log = make({});

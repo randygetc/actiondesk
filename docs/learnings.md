@@ -104,3 +104,14 @@ is cancelled") and 1 upcoming task.
 - One email; the second run found nobody due (no resend). Cost $0.0046, logged as `digest`.
 - The injection-style title was listed as an overdue task and flagged for cleanup. It wasn't followed.
 - The email's HTML contained only the template's tags; all model and task text was escaped.
+
+## Observability (step 3.8, 2026-10-01)
+
+- A thrown error in `/api/debug/error` (signed in, dev) returned 500 with an `x-request-id`, and the stack
+  trace pointed at source lines (`route.ts:6:9` in `failOnPurpose`). An upstream request id is kept.
+- `requestLog()` first called `headers()` unguarded, so code reached outside a request (the cap check in a
+  DB test) threw. It also didn't pass its bound ids to the Sentry bridge, so events would have had empty
+  `requestId` tags. A unit test now checks both.
+- The MFA e2e tests failed depending on the clock: a second TOTP code waits for the next 30 s window,
+  longer than the default test timeout. That spec now allows 90 s.
+- Changing `next.config.ts` while `next dev` runs reloads it, and an import error stopped the server.

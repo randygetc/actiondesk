@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import type { ActionResult } from "@/lib/action-result";
-import { log } from "@/lib/log";
+import { requestLog } from "@/lib/request-log";
 import { createClient } from "@/lib/supabase/server";
 import { updateProfileSchema } from "@/lib/validation/profile";
 
@@ -38,7 +38,10 @@ export async function updateProfile(
     .eq("id", user.id);
 
   if (error) {
-    log.warn("profile.update_failed", { userId: user.id, code: error.code });
+    (await requestLog()).warn("profile.update_failed", {
+      userId: user.id,
+      code: error.code,
+    });
     if (error.code === "22023") {
       return {
         ok: false,
@@ -52,7 +55,7 @@ export async function updateProfile(
     };
   }
 
-  log.info("profile.updated", { userId: user.id });
+  (await requestLog()).info("profile.updated", { userId: user.id });
   revalidatePath("/", "layout");
   return { ok: true, data: undefined };
 }

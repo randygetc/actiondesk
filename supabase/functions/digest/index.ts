@@ -13,6 +13,7 @@
 // the email (rule 7). Logs carry ids and counts only (rule 12).
 
 import Anthropic from "@anthropic-ai/sdk";
+import * as Sentry from "@sentry/deno";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
@@ -33,6 +34,16 @@ const SUPABASE_URL = env("SUPABASE_URL");
 const SERVICE_KEY = env("SUPABASE_SERVICE_ROLE_KEY");
 const MODEL = "claude-sonnet-5-5";
 const TIME_BUDGET_MS = 100_000; // stop early; the next hourly run resumes
+
+// Step 3.8: errors go to Sentry when the function has a SENTRY_DSN secret.
+// No personal data: ids only, never task text or emails.
+if (env("SENTRY_DSN")) {
+  Sentry.init({
+    dsn: env("SENTRY_DSN"),
+    environment: env("SENTRY_ENVIRONMENT") || "development",
+    tracesSampleRate: 0,
+  });
+}
 
 function log(
   event: string,
@@ -263,6 +274,10 @@ async function runScheduled(admin: SupabaseClient, now?: string) {
         userId: r.user_id,
         code,
       });
+      Sentry.captureException(e, {
+        tags: { feature: "digest", code },
+        extra: { workspaceId: r.workspace_id, userId: r.user_id },
+      });
     }
   }
   log("digest.batch", counts);
@@ -337,12 +352,16 @@ Deno.serve(async (req) => {
       // Only the cron job holds the service key.
       if (req.headers.get("Authorization") !== `Bearer ${SERVICE_KEY}`)
         return json({ error: "unauthorized" }, 401);
-      return json(await runScheduled(admin, body.data.now));
+      const result = await runScheduled(admin, body.data.now);
+      await Sentry.flush(2_000); // per-recipient failures were captured in the batch
+      return json(result);
     }
     return await runTest(req, admin, body.data.workspace_id);
   } catch (e) {
     const code = e instanceof DigestError ? e.code : "error";
     log("digest.error", { code });
+    Sentry.captureException(e, { tags: { feature: "digest", code } });
+    await Sentry.flush(2_000);
     return json({ error: code }, code === "invalid_output" ? 502 : 500);
   }
 });

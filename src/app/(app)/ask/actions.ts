@@ -11,6 +11,7 @@ import { ASK_PROMPT_VERSION } from "@/lib/llm/prompts/ask";
 import { CAP_MESSAGE, capReached } from "@/lib/llm/usage";
 import { usageRun, type UsageRun } from "@/lib/llm/usage-run";
 import { log } from "@/lib/log";
+import { requestLog } from "@/lib/request-log";
 import { createClient } from "@/lib/supabase/server";
 import { currentWorkspace, VIEW_ONLY_MESSAGE } from "@/lib/workspace/current";
 import { toUtc } from "@/lib/time/zones";
@@ -144,7 +145,7 @@ async function* run(
       set("aborted");
     } else {
       set("error");
-      log.error("ask.failed", {
+      (await requestLog()).error("ask.failed", {
         userId: ctx.user.id,
         status: isApiError(e) ? (e.status ?? null) : null,
         kind: e instanceof Error ? e.name : "unknown",
@@ -160,7 +161,11 @@ async function* run(
   } finally {
     // If the client disconnected, after() in usageRun records instead.
     await usage.finish();
-    log.info("ask.answered", { userId: ctx.user.id, toolCalls, outcome });
+    (await requestLog()).info("ask.answered", {
+      userId: ctx.user.id,
+      toolCalls,
+      outcome,
+    });
   }
 }
 
@@ -208,7 +213,10 @@ export async function confirmCreateTask(
     .select("id")
     .single();
   if (error) {
-    log.error("ask.confirm_failed", { userId: ctx.user.id, code: error.code });
+    (await requestLog()).error("ask.confirm_failed", {
+      userId: ctx.user.id,
+      code: error.code,
+    });
     return {
       ok: false,
       error:
@@ -220,7 +228,10 @@ export async function confirmCreateTask(
     };
   }
 
-  log.info("ask.task_created", { userId: ctx.user.id, taskId: data.id });
+  (await requestLog()).info("ask.task_created", {
+    userId: ctx.user.id,
+    taskId: data.id,
+  });
   revalidatePath("/tasks");
   return { ok: true, data: { id: data.id } };
 }

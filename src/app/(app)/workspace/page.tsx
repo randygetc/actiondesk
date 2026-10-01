@@ -147,8 +147,8 @@ export default async function WorkspacePage() {
           </h2>
           <p className="text-sm text-muted-foreground">
             Every member gets an AI summary of the week on Monday at 8am in
-            their own time zone: what got done, what&apos;s overdue, what&apos;s coming
-            up.
+            their own time zone: what got done, what&apos;s overdue, what&apos;s
+            coming up.
           </p>
           <TestDigestForm action={sendTestDigest} />
         </section>

@@ -7,7 +7,7 @@ import { z } from "zod";
 
 import type { ActionResult } from "@/lib/action-result";
 import { MFA_MESSAGES, stepUp } from "@/lib/auth/mfa";
-import { log } from "@/lib/log";
+import { requestLog } from "@/lib/request-log";
 import { createClient } from "@/lib/supabase/server";
 import {
   INVITE_ERRORS,
@@ -83,13 +83,16 @@ export async function createWorkspace(
     p_name: name.data,
   });
   if (error || !id) {
-    log.error("workspace.create_failed", {
+    (await requestLog()).error("workspace.create_failed", {
       userId: user.id,
       code: error?.code ?? null,
     });
     return failed;
   }
-  log.info("workspace.created", { userId: user.id, workspaceId: id });
+  (await requestLog()).info("workspace.created", {
+    userId: user.id,
+    workspaceId: id,
+  });
   await setWorkspaceCookie(id);
   refresh();
   redirect("/workspace");
@@ -155,13 +158,13 @@ export async function createInvite(
       return { ok: false, error: "Only an owner can invite people." };
     const known = error?.message ? INVITE_ERRORS[error.message] : undefined;
     if (!known)
-      log.error("invite.create_failed", {
+      (await requestLog()).error("invite.create_failed", {
         userId: user.id,
         code: error?.code ?? null,
       });
     return { ok: false, error: known ?? failed.error };
   }
-  log.info("invite.created", {
+  (await requestLog()).info("invite.created", {
     userId: user.id,
     workspaceId: current.id,
     role: parsed.data.role,
@@ -206,7 +209,7 @@ export async function changeRole(
   if (error) return failed;
   if (data.length === 0)
     return { ok: false, error: "Only an owner can change roles." };
-  log.info("workspace.role_changed", {
+  (await requestLog()).info("workspace.role_changed", {
     userId: user.id,
     workspaceId: current.id,
     memberId: parsed.data.userId,
@@ -251,7 +254,7 @@ export async function removeMember(
     return { ok: false, error: "A workspace needs at least one owner." };
   if (error) return failed;
   if (data.length === 0) return { ok: false, error: VIEW_ONLY_MESSAGE };
-  log.info("workspace.member_removed", {
+  (await requestLog()).info("workspace.member_removed", {
     userId: user.id,
     workspaceId: current.id,
     memberId: memberId.data,
@@ -288,13 +291,16 @@ export async function acceptInvite(
   if (error || !workspaceId) {
     const known = error?.message ? INVITE_ERRORS[error.message] : undefined;
     if (!known)
-      log.error("invite.accept_failed", {
+      (await requestLog()).error("invite.accept_failed", {
         userId: user.id,
         code: error?.code ?? null,
       });
     return { ok: false, error: known ?? failed.error };
   }
-  log.info("invite.accepted", { userId: user.id, workspaceId });
+  (await requestLog()).info("invite.accepted", {
+    userId: user.id,
+    workspaceId,
+  });
   await setWorkspaceCookie(workspaceId);
   refresh();
   redirect("/tasks");
@@ -331,13 +337,16 @@ export async function deleteWorkspace(
       return { ok: false, error: MFA_MESSAGES.needCode };
     if (error.code === "42501")
       return { ok: false, error: "Only an owner can delete a workspace." };
-    log.error("workspace.delete_failed", {
+    (await requestLog()).error("workspace.delete_failed", {
       userId: user.id,
       code: error.code ?? null,
     });
     return failed;
   }
-  log.info("workspace.deleted", { userId: user.id, workspaceId: current.id });
+  (await requestLog()).info("workspace.deleted", {
+    userId: user.id,
+    workspaceId: current.id,
+  });
   const next = all.find((w) => w.id !== current.id);
   if (next) await setWorkspaceCookie(next.id);
   refresh();
@@ -377,7 +386,7 @@ export async function sendTestDigest(): Promise<
         ? ((await error.context.json().catch(() => ({}))) as { error?: string })
             .error
         : undefined;
-    log.error("digest.test_failed", {
+    (await requestLog()).error("digest.test_failed", {
       userId: user.id,
       reason: reason ?? null,
     });

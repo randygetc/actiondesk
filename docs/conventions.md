@@ -291,3 +291,19 @@ Versions: Next 16.3, React 19.2, TypeScript 5.9, Tailwind 4, Zod 4, Vitest 5, @s
   Keep Temporal for conversions (`toUtc`), not for per-row formatting.
 - **Load tests run against `next start`,** never `next dev`. Use the stress ramp for capacity and
   `RATE=n` for realistic latency.
+
+## Observability (step 3.8, 2026-10-01)
+- **Log with `(await requestLog())`** in Server Actions and server code that runs per request. It adds
+  `requestId` (from the proxy's `x-request-id`) and the current `workspaceId`. Call sites add
+  `userId`, `feature`, `latencyMs` and their own ids. Use the plain `log` only in synchronous helpers.
+- **`requestLog().error()` also reports to Sentry** (redacted fields as `extra`; event, requestId and
+  workspaceId as tags), because actions catch most errors to show a friendly message. So use `error`
+  for real failures; expected refusals are `info` or `warn`.
+- **Sentry setup:** `src/instrumentation.ts` (server and edge, plus `onRequestError`),
+  `src/instrumentation-client.ts`, `src/app/global-error.tsx`, and one shared options file with a
+  scrubber (no bodies, cookies, query strings, headers other than the request id, or IP; no session
+  replay). In v11, `withSentryConfig` comes from `@sentry/nextjs/config`.
+- **`/api/health` is public** and checks Auth and REST. `/api/debug/error` throws on purpose, needs a
+  session, and returns 404 in production unless `ALLOW_DEBUG_ERROR=1`.
+- **Editing `next.config.ts` restarts a running dev server, and a broken config stops it.** Check the
+  config with `npm run build` before relying on the dev server.

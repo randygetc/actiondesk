@@ -4,6 +4,10 @@ import { signIn, signInAsNewUser } from "./helpers/auth";
 import { totp } from "./helpers/totp";
 import { newUser, shareWorkspace } from "./helpers/workspace";
 
+// A test that needs a second code waits for the next 30 s TOTP window
+// (freshCode), so the default 30 s timeout fails depending on the clock.
+test.describe.configure({ timeout: 90_000 });
+
 const usedCodes = new Set<string>();
 
 /** A code not used before in this run (Supabase refuses a replayed code). */

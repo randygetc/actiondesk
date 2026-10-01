@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/lib/database.types";
 import { log } from "@/lib/log";
+import { requestLog } from "@/lib/request-log";
 
 import type { LlmMessage, LlmUsage } from "./client";
 import { costUsd, isKnownModel } from "./pricing";
@@ -105,8 +106,12 @@ export async function recordUsage(
     costUsd: s.cost,
     latencyMs: s.latencyMs,
   };
-  if (error) log.error("llm.usage_log_failed", { ...fields, code: error.code });
-  else log.info("llm.call", fields);
+  if (error)
+    (await requestLog()).error("llm.usage_log_failed", {
+      ...fields,
+      code: error.code,
+    });
+  else (await requestLog()).info("llm.call", fields);
 }
 
 const DEFAULT_DAILY_CAP_USD = 1;
@@ -138,7 +143,7 @@ export async function capReached(
 ): Promise<boolean> {
   const { data, error } = await supabase.rpc("llm_spend_recent");
   if (error) {
-    log.error("llm.cap_check_failed", { code: error.code });
+    (await requestLog()).error("llm.cap_check_failed", { code: error.code });
     return true;
   }
   return Number(data) >= cap;

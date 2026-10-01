@@ -3,7 +3,11 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import type { Database } from "@/lib/database.types";
 
-const PUBLIC_PATHS = ["/login", "/auth/"];
+// The proxy runs before any page; keep in step with src/lib/request-log.ts.
+const REQUEST_ID_HEADER = "x-request-id";
+
+// /api/health is for uptime checks (step 3.8), so it needs no session.
+const PUBLIC_PATHS = ["/login", "/auth/", "/api/health"];
 
 function isPublic(pathname: string) {
   return PUBLIC_PATHS.some((p) =>
@@ -17,7 +21,23 @@ function isPublic(pathname: string) {
  * authorization boundary: pages and Server Actions still call getUser().
  */
 export async function updateSession(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  // Every request gets an id (step 3.8): reuse one from upstream (e.g. Vercel)
+  // if it looks sane, else make one. Forwarded to the app, where requestLog()
+  // puts it on every log line, and returned to the client for support.
+  const incoming = request.headers.get(REQUEST_ID_HEADER);
+  const requestId =
+    incoming && /^[\w-]{8,128}$/.test(incoming)
+      ? incoming
+      : crypto.randomUUID();
+  const forwarded = new Headers(request.headers);
+  forwarded.set(REQUEST_ID_HEADER, requestId);
+  const next = () => {
+    const r = NextResponse.next({ request: { headers: forwarded } });
+    r.headers.set(REQUEST_ID_HEADER, requestId);
+    return r;
+  };
+
+  let response = next();
 
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -31,7 +51,7 @@ export async function updateSession(request: NextRequest) {
           for (const { name, value } of cookiesToSet) {
             request.cookies.set(name, value);
           }
-          response = NextResponse.next({ request });
+          response = next();
           for (const { name, value, options } of cookiesToSet) {
             response.cookies.set(name, value, options);
           }

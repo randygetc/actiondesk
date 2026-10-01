@@ -26,4 +26,21 @@ describe("log", () => {
       taskId: "t1",
     });
   });
+
+  it("binds context with .with(), and call-site fields win", () => {
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const child = log.with({ requestId: "r1", workspaceId: "w1" });
+    child.with({ userId: "u1" }).info("x", { workspaceId: "w2" });
+    expect(JSON.parse(spy.mock.calls[0][0] as string)).toMatchObject({
+      requestId: "r1",
+      userId: "u1",
+      workspaceId: "w2",
+    });
+  });
+
+  it("redacts bound fields too", () => {
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+    log.with({ apiKey: "secret" }).info("x");
+    expect(JSON.parse(spy.mock.calls[0][0] as string).apiKey).toBe(REDACTED);
+  });
 });

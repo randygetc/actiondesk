@@ -6,6 +6,7 @@ import type { z } from "zod";
 
 import type { ActionResult } from "@/lib/action-result";
 import { log } from "@/lib/log";
+import { requestLog } from "@/lib/request-log";
 import { createClient } from "@/lib/supabase/server";
 import { nextOccurrence } from "@/lib/time/recurrence";
 import { toUtc } from "@/lib/time/zones";
@@ -165,7 +166,7 @@ export async function createTask(
     .single();
   if (error) return dbError(error.code, user.id, "task.create_failed");
 
-  log.info("task.created", {
+  (await requestLog()).info("task.created", {
     userId: user.id,
     taskId: data.id,
     recurring: !!t.recurrence,
@@ -220,7 +221,10 @@ export async function updateTask(
       return dbError(done.error.code, user.id, "task.complete_failed");
   }
 
-  log.info("task.updated", { userId: user.id, taskId: id.data });
+  (await requestLog()).info("task.updated", {
+    userId: user.id,
+    taskId: id.data,
+  });
   revalidate();
   redirect("/tasks");
 }
@@ -234,12 +238,15 @@ export async function completeTask(formData: FormData): Promise<void> {
 
   const done = await complete(supabase, id.data, new Date());
   if (done.error)
-    log.warn("task.complete_failed", {
+    (await requestLog()).warn("task.complete_failed", {
       userId: user.id,
       code: done.error.code,
     });
   else if (done.found)
-    log.info("task.completed", { userId: user.id, taskId: id.data });
+    (await requestLog()).info("task.completed", {
+      userId: user.id,
+      taskId: id.data,
+    });
   revalidate();
 }
 
@@ -255,8 +262,15 @@ export async function reopenTask(formData: FormData): Promise<void> {
     .update({ status: "todo" })
     .eq("id", id.data);
   if (error)
-    log.warn("task.reopen_failed", { userId: user.id, code: error.code });
-  else log.info("task.reopened", { userId: user.id, taskId: id.data });
+    (await requestLog()).warn("task.reopen_failed", {
+      userId: user.id,
+      code: error.code,
+    });
+  else
+    (await requestLog()).info("task.reopened", {
+      userId: user.id,
+      taskId: id.data,
+    });
   revalidate();
 }
 
@@ -278,7 +292,10 @@ export async function deleteTask(
   if (error) return dbError(error.code, user.id, "task.delete_failed");
   if (data.length === 0) return notFound;
 
-  log.info("task.deleted", { userId: user.id, taskId: id.data });
+  (await requestLog()).info("task.deleted", {
+    userId: user.id,
+    taskId: id.data,
+  });
   revalidate();
   redirect("/tasks");
 }

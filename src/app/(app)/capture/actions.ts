@@ -18,7 +18,7 @@ import {
 import { EXTRACT_MODEL } from "@/lib/llm/models";
 import { CAP_MESSAGE, capReached } from "@/lib/llm/usage";
 import { usageRun, type UsageRun } from "@/lib/llm/usage-run";
-import { log } from "@/lib/log";
+import { requestLog } from "@/lib/request-log";
 import { createClient } from "@/lib/supabase/server";
 import { currentWorkspace, VIEW_ONLY_MESSAGE } from "@/lib/workspace/current";
 import { toUtc } from "@/lib/time/zones";
@@ -169,7 +169,7 @@ async function* run(
       set("aborted");
     } else if (e instanceof NoteTooLargeError) {
       set("error");
-      log.info("capture.note_too_large", {
+      (await requestLog()).info("capture.note_too_large", {
         userId: ctx.user.id,
         tokens: e.tokens,
       });
@@ -180,7 +180,7 @@ async function* run(
       };
     } else {
       set("error");
-      log.error("capture.extract_failed", {
+      (await requestLog()).error("capture.extract_failed", {
         userId: ctx.user.id,
         status: isApiError(e) ? (e.status ?? null) : null,
         kind: e instanceof Error ? e.name : "unknown",
@@ -196,7 +196,11 @@ async function* run(
   } finally {
     // If the client disconnected, after() in usageRun records instead.
     await usage.finish();
-    log.info("capture.extracted", { userId: ctx.user.id, count, outcome });
+    (await requestLog()).info("capture.extracted", {
+      userId: ctx.user.id,
+      count,
+      outcome,
+    });
   }
 }
 
@@ -245,7 +249,10 @@ export async function saveReviewedTasks(
     )
     .select("id");
   if (error) {
-    log.error("capture.save_failed", { userId: ctx.user.id, code: error.code });
+    (await requestLog()).error("capture.save_failed", {
+      userId: ctx.user.id,
+      code: error.code,
+    });
     return {
       ok: false,
       error:
@@ -261,7 +268,10 @@ export async function saveReviewedTasks(
   const attachment = attachmentIdSchema.safeParse(attachmentId);
   if (attachment.success) await deleteAttachment(ctx, attachment.data);
 
-  log.info("capture.saved", { userId: ctx.user.id, count: data.length });
+  (await requestLog()).info("capture.saved", {
+    userId: ctx.user.id,
+    count: data.length,
+  });
   revalidatePath("/tasks");
   return { ok: true, data: { count: data.length } };
 }
@@ -304,7 +314,7 @@ export async function uploadAttachment(
     size_bytes: bytes.length,
   });
   if (rowError) {
-    log.error("capture.attachment_row_failed", {
+    (await requestLog()).error("capture.attachment_row_failed", {
       userId: ctx.user.id,
       code: rowError.code,
     });
@@ -316,11 +326,13 @@ export async function uploadAttachment(
     .upload(path, bytes, { contentType: mime, upsert: false });
   if (uploadError) {
     await ctx.supabase.from("attachments").delete().eq("id", id);
-    log.error("capture.attachment_upload_failed", { userId: ctx.user.id });
+    (await requestLog()).error("capture.attachment_upload_failed", {
+      userId: ctx.user.id,
+    });
     return { ok: false, error: "Couldn't upload the file. Try again." };
   }
 
-  log.info("capture.attachment_uploaded", {
+  (await requestLog()).info("capture.attachment_uploaded", {
     userId: ctx.user.id,
     attachmentId: id,
     kind: detected.kind,
@@ -356,7 +368,9 @@ export async function extractFromAttachment(
     .from(BUCKET)
     .download(row.storage_path);
   if (error || !blob) {
-    log.error("capture.attachment_download_failed", { userId: ctx.user.id });
+    (await requestLog()).error("capture.attachment_download_failed", {
+      userId: ctx.user.id,
+    });
     return once({
       type: "error",
       message: "Couldn't read the file. Try again.",
@@ -392,14 +406,14 @@ async function deleteAttachment(ctx: Ctx, id: string): Promise<void> {
     .from(BUCKET)
     .remove([row.storage_path]);
   if (error) {
-    log.error("capture.attachment_delete_failed", {
+    (await requestLog()).error("capture.attachment_delete_failed", {
       userId: ctx.user.id,
       attachmentId: id,
     });
     return;
   }
   await ctx.supabase.from("attachments").delete().eq("id", id);
-  log.info("capture.attachment_deleted", {
+  (await requestLog()).info("capture.attachment_deleted", {
     userId: ctx.user.id,
     attachmentId: id,
   });
