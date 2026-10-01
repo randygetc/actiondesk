@@ -1,5 +1,5 @@
 // Step 3.8: uptime check. Public, cheap, no user data: is the app up, and can
-// it reach Supabase Auth and the REST API?
+// it reach Supabase Auth and the database (through the REST API)?
 export const dynamic = "force-dynamic";
 
 async function reachable(url: string): Promise<boolean> {
@@ -19,7 +19,9 @@ export async function GET() {
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const [auth, db] = await Promise.all([
     reachable(`${base}/auth/v1/health`),
-    reachable(`${base}/rest/v1/`),
+    // Hosted Supabase refuses the REST root without a secret key; this RPC
+    // is a real database round trip that the publishable key may make.
+    reachable(`${base}/rest/v1/rpc/health_check`),
   ]);
   const ok = auth && db;
   return Response.json(
