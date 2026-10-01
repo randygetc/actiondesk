@@ -2,7 +2,7 @@
 
 Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.md.
 
-- **Last updated:** 2026-10-01 (step 3.6: weekly digest)
+- **Last updated:** 2026-10-01 (step 3.7: performance)
 - **Sources:** CLAUDE.md, docs/architecture.md, docs/adr/0001–0005, docs/KICKOFF.md, guardrails/, .claude/
 - **Scope:** Phases 1 and 2 are done. Phase 3 is detailed in §4 (3.1).
 - **Needs your decision:** the owner items in §7 (risks and gaps in the guardrails). All §6 decisions are made.
@@ -35,8 +35,9 @@ Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.
 | 3.3 | Invites | done (PR #25) |
 | 3.4 | Realtime | done (PR #26) |
 | 3.5 | MFA | done (PR #27) |
-| 3.6 | Weekly digest | PR open on `phase3/digest`: hourly cron → `digest` Edge Function; Monday 08:00 per recipient; no resend; empty weeks skipped; usage logged; test-digest button |
-| 3.7–3.12 | Workspaces, jobs, prod | detailed in §4; not started |
+| 3.6 | Weekly digest | done (PR #28) |
+| 3.7 | Performance at 100k | PR open on `phase3/performance`: 2 indexes, date code 10× faster, tasks page queried per group (owner decision); report in docs/performance.md |
+| 3.8–3.12 | Workspaces, jobs, prod | detailed in §4; not started |
 
 ### 0.1 Phase 1 summary (2026-09-30)
 
@@ -789,6 +790,7 @@ On 2026-09-29 the owner accepted every recommendation, and chose to cut the 1.6 
 | D-25 | AI cap per user or per workspace | Per user for now (rolling 24 h); `llm_usage.workspace_id` for reporting; revisit at 3.6 | Accepted (2026-09-30) |
 | D-26 | Email provider for the digest | Resend (HTTPS API, idempotency keys); Mailpit locally | Accepted (2026-10-01) |
 | D-27 | Digest recipients | Every member, each at Monday 08:00 in their own time zone | Accepted (2026-10-01) |
+| D-28 | The tasks page rendered up to 500 rows (~1 MB, the main CPU cost at scale) | Query each group separately: first 50 plus an exact count, with "Show all (N)" | Accepted (2026-10-01) |
 
 ---
 
@@ -806,7 +808,7 @@ Items marked **(owner)** involve locked files that I can't and won't change.
 | R-6 | `server-only` throws outside the `react-server` condition, so Vitest and `npm run eval` can't import `src/lib/llm` directly. | Alias `server-only` to a no-op in the Vitest config; run evals through Vitest or with `--conditions=react-server`. Never remove the import to make a test pass. |
 | R-7 | The digest Edge Function (Deno) needs Zod schemas and prompts that live in `src/lib/`. | Duplicate a small digest schema in `supabase/functions/_shared/` for now; ADR if sharing is wanted. |
 | R-8 | Recurrence with RRULE libraries: `rrule.js` handles time zones poorly (TZID and floating times), so DST bugs are likely. | Expand in local wall-clock time and then convert with a proper tz library. The 1.8 tests are the gate. Choose the library at 1.7 (ask first). |
-| R-9 | Rule 13 (no index without measurements) vs normal practice of indexing foreign keys. Phase 1 will have no FK or `due_at` indexes. | Accept it: data is tiny until 3.7, which measures and adds them. Flag if you'd rather allow FK indexes up front. |
+| R-9 | ~~No FK or `due_at` indexes until measured~~ | Done at 3.7 with numbers: `tasks_project_id_idx` and `tasks_workspace_open_due_idx` (docs/performance.md). |
 | R-10 | `complete_task` race conditions and double submits. | `unique (series_id, due_at)` plus an idempotent function, with a test that runs it twice concurrently. |
 | R-11 | `supabase/config.toml` has `additional_redirect_urls = ["https://127.0.0.1:3000"]` (https, no path), and Google isn't configured. | Fix both in 1.5; the redirect must allow `http://127.0.0.1:3000/auth/callback`. |
 | R-12 | ~~postgres_changes cost and unfiltered DELETE events~~ | Resolved at 3.4: private Broadcast from triggers, authorized by RLS on `realtime.messages`. Messages carry ids only. |
@@ -824,11 +826,12 @@ Items marked **(owner)** involve locked files that I can't and won't change.
 | R-24 | ~~The 11 MB body limit applies to all actions~~ | Resolved with D-22: the Server Action limit is 4.5 MB (a 4 MB file plus overhead), and the proxy override is gone. |
 | R-25 | A client can forge earlier assistant turns in its own chat history (review #10). The impact stays with that user: tools re-run and writes are proposal-only. | Accepted for Phase 2. Keep history server-side if chat persistence is added. |
 | R-26 | Project names and the display name go into prompts outside the note tag (review #11). This is harmless while each user sees only their own data. | Phase 3 (workspaces): wrap every member-written list in data framing, and add Ask injection cases for other members' titles and project names. |
-| R-27 | The backfill migration (§4.4 step 2) runs in one transaction over all rows in prod. | Fine at current size; time it on the 3.7 seed before deploying. |
+| R-27 | ~~Backfill timing at scale~~ | Measured at 3.7: a 100k-row task update takes ~12 s with row locks. Not an issue for the fresh prod deploy; future bulk changes should be batched, with indexes built `concurrently` outside a migration. |
 | R-28 | The current-workspace cookie is set by the client. | It's only a preference: RLS authorizes every read and write, and `getCurrentWorkspace` ignores a workspace the user isn't a member of. Add a test at 3.2. |
 | R-29 | Co-members can read each other's `display_name`. | Mention it in the privacy notes at 3.10. |
 | R-30 | A signed-out invitee's token passes through `/login?next=/invite/<token>` and the OAuth redirect, so it can appear in auth logs. | Accepted: a token works once, only for the invited email (D-16), and expires in 7 days. If needed, park it in a short-lived httpOnly cookie before login. |
-| R-31 | Every task change re-renders every open page in that workspace (`router.refresh()`, debounced by 250 ms). Cheap now; at the 3.7 scale a burst could cost many server renders. | Measure at 3.7. If it matters, send changed rows through RLS-checked reads instead of full refreshes. |
+| R-31 | Every task change re-renders open pages in that workspace (`router.refresh()`). | Measured at 3.7: a tasks page render is ~150 rows (311 KB), and steady 10 req/s gives p95 ~230 ms on one process. Re-check on Vercel (3.10). |
 | R-32 | TOTP is enabled in `supabase/config.toml` for local and CI only. In prod it's a dashboard setting. | Add to the 3.10 deploy runbook: enable TOTP (enroll + verify) in the prod project before shipping, or owners can't delete workspaces or remove members. |
 | R-33 | The digest needs per-environment setup that isn't in migrations. | 3.10 runbook: Vault secrets `digest_function_url` and `service_role_key` (until they're set, the cron job does nothing); function secrets `ANTHROPIC_API_KEY`, `RESEND_API_KEY`, `EMAIL_TRANSPORT=resend`, `DIGEST_FROM`, `APP_URL`, `LLM_DAILY_CAP_USD`; Resend sending-domain verification; `supabase functions deploy digest`. |
 | R-34 | The scheduled digest isn't counted against users' AI caps (one call per member per week; logged as `digest`). The test button is counted. | Revisit with real usage at 3.7. A per-workspace cap (D-25) would cover it. |
+| R-35 | The 20-user stress test of `/tasks` has a p95 of 2.0 s on one local Node process (steady 10 req/s: 230 ms). | Re-run k6 against the first Vercel preview (3.10), where concurrent requests don't share one process. |

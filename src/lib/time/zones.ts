@@ -28,30 +28,60 @@ export function toZoned(instant: Date, tz: string): Temporal.ZonedDateTime {
   ).toZonedDateTimeISO(tz);
 }
 
+// Formatters are cached per zone: building an Intl.DateTimeFormat (or Temporal
+// objects) per row cost ~40 ms on a 500-task page (step 3.7 profile).
+const formatters = new Map<string, Intl.DateTimeFormat>();
+function formatter(key: string, make: () => Intl.DateTimeFormat) {
+  let f = formatters.get(key);
+  if (!f) {
+    f = make();
+    formatters.set(key, f);
+  }
+  return f;
+}
+
 /** UTC instant → local `YYYY-MM-DD` and `HH:MM` in the zone, e.g. for form defaults. */
 export function toLocalParts(
   instant: Date,
   tz: string,
 ): { date: string; time: string } {
-  const z = toZoned(instant, tz);
+  const parts = formatter(
+    `parts|${tz}`,
+    () =>
+      new Intl.DateTimeFormat("en-CA", {
+        timeZone: tz,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+      }),
+  ).formatToParts(instant);
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)!.value;
   return {
-    date: z.toPlainDate().toString(),
-    time: z.toPlainTime().toString({ smallestUnit: "minute" }),
+    date: `${get("year")}-${get("month")}-${get("day")}`,
+    time: `${get("hour")}:${get("minute")}`,
   };
 }
 
 /** Short display string in the zone, e.g. "Wed, Oct 7, 09:00"; date only for end-of-day. */
 export function formatDue(instant: Date, tz: string): string {
-  const { time } = toLocalParts(instant, tz);
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: tz,
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    ...(time === END_OF_DAY
-      ? {}
-      : { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }),
-  }).format(instant);
+  const withTime = toLocalParts(instant, tz).time !== END_OF_DAY;
+  return formatter(
+    `due|${tz}|${withTime}`,
+    () =>
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: tz,
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        ...(withTime
+          ? { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }
+          : {}),
+      }),
+  ).format(instant);
 }
 
 /** True if `date` is a real calendar date in `YYYY-MM-DD` form. */

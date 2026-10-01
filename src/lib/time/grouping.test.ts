@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { groupFor, groupTasks } from "./grouping";
+import { groupBounds, groupFor, groupTasks } from "./grouping";
 import { toUtc } from "./zones";
 
 const LA = "America/Los_Angeles";
@@ -68,4 +68,39 @@ describe("groupTasks", () => {
     ]);
     expect(done.map((x) => x.id)).toEqual(["done"]);
   });
+});
+
+describe("groupBounds (the tasks page queries groups by these ranges)", () => {
+  const byBounds = (due: Date | null, now: Date, tz: string) => {
+    if (!due) return "noDate";
+    const { todayEnd, weekEnd } = groupBounds(now, tz);
+    if (due < now) return "overdue";
+    if (due < todayEnd) return "today";
+    return due < weekEnd ? "thisWeek" : "later";
+  };
+
+  it.each([
+    "America/Los_Angeles",
+    "Asia/Manila",
+    "Europe/London",
+    "Australia/Sydney",
+  ])(
+    "agrees with groupFor for every hour around both DST changes, any day of the week (%s)",
+    (tz) => {
+      // Each `now` is a different weekday/hour; each due date spans 10 days on.
+      for (const start of [
+        "2026-03-05T00:00:00Z",
+        "2026-10-28T00:00:00Z",
+        "2026-04-01T00:00:00Z",
+      ]) {
+        for (let n = 0; n < 7 * 24; n += 7) {
+          const now = new Date(Date.parse(start) + n * 3600_000 + 17 * 60_000);
+          for (let h = -6; h < 10 * 24; h += 5) {
+            const due = new Date(now.getTime() + h * 3600_000);
+            expect(byBounds(due, now, tz)).toBe(groupFor(due, now, tz));
+          }
+        }
+      }
+    },
+  );
 });
