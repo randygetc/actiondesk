@@ -2,7 +2,7 @@
 
 Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.md.
 
-- **Last updated:** 2026-10-01 (step 3.8: observability)
+- **Last updated:** 2026-10-01 (step 3.10: deploy)
 - **Sources:** CLAUDE.md, docs/architecture.md, docs/adr/0001–0005, docs/KICKOFF.md, guardrails/, .claude/
 - **Scope:** Phases 1 and 2 are done. Phase 3 is detailed in §4 (3.1).
 - **Needs your decision:** the owner items in §7 (risks and gaps in the guardrails). All §6 decisions are made.
@@ -37,8 +37,10 @@ Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.
 | 3.5 | MFA | done (PR #27) |
 | 3.6 | Weekly digest | done (PR #28) |
 | 3.7 | Performance at 100k | done (PR #29) |
-| 3.8 | Observability | PR open on `phase3/observability`: Sentry (browser, server, edge, digest function), request ids, request-bound logger, logged errors reported, `/api/health` |
-| 3.9–3.12 | Workspaces, jobs, prod | detailed in §4; not started |
+| 3.8 | Observability | done (PR #30) |
+| 3.9 | Planted bug | owner-driven; not run yet |
+| 3.10 | Deploy | PR open on `phase3/deploy`: prod live at actiondesk-rouge.vercel.app (Supabase `obssgmldayxyniyzlpgg`, us-west-1); runbook and log in docs/deploy.md |
+| 3.11–3.12 | Incident drill, final review | detailed in §4; not started |
 
 ### 0.1 Phase 1 summary (2026-09-30)
 

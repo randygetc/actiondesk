@@ -307,3 +307,13 @@ Versions: Next 16.3, React 19.2, TypeScript 5.9, Tailwind 4, Zod 4, Vitest 5, @s
   session, and returns 404 in production unless `ALLOW_DEBUG_ERROR=1`.
 - **Editing `next.config.ts` restarts a running dev server, and a broken config stops it.** Check the
   config with `npm run build` before relying on the dev server.
+
+## Deploying (step 3.10, 2026-10-01)
+- **docs/deploy.md is the runbook,** and its deploy log records every production change. Ask before
+  every command that touches production (`db push`, `functions deploy`, `secrets set`).
+- **Prod checks are read-only queries:** `supabase db query --linked "<select>"`. Print counts and
+  flags, never row contents or keys.
+- **Health probes use what the browser key may do.** Hosted Supabase differs from local here (the REST
+  root needs a secret key), so check new probes against production with the publishable key.
+- **Secrets never pass through chat or the command line.** The owner enters them in dashboards, or
+  the CLI reads a temporary file outside the repo (`--env-file`), which is deleted afterwards.

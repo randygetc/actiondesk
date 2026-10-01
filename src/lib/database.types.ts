@@ -92,6 +92,60 @@ export type Database = {
           },
         ];
       };
+      digest_runs: {
+        Row: {
+          attempts: number;
+          created_at: string;
+          error_code: string | null;
+          id: string;
+          sent_at: string | null;
+          status: Database["public"]["Enums"]["digest_status"];
+          updated_at: string;
+          user_id: string;
+          week_start: string;
+          workspace_id: string;
+        };
+        Insert: {
+          attempts?: number;
+          created_at?: string;
+          error_code?: string | null;
+          id?: string;
+          sent_at?: string | null;
+          status?: Database["public"]["Enums"]["digest_status"];
+          updated_at?: string;
+          user_id: string;
+          week_start: string;
+          workspace_id: string;
+        };
+        Update: {
+          attempts?: number;
+          created_at?: string;
+          error_code?: string | null;
+          id?: string;
+          sent_at?: string | null;
+          status?: Database["public"]["Enums"]["digest_status"];
+          updated_at?: string;
+          user_id?: string;
+          week_start?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "digest_runs_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "digest_runs_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       invites: {
         Row: {
           accepted_at: string | null;
@@ -477,6 +531,21 @@ export type Database = {
         Args: { p_workspace_id: string };
         Returns: undefined;
       };
+      digest_data: {
+        Args: { p_now?: string; p_tz: string; p_workspace_id: string };
+        Returns: Json;
+      };
+      digest_due: {
+        Args: { p_now?: string };
+        Returns: {
+          email: string;
+          timezone: string;
+          user_id: string;
+          week_start: string;
+          workspace_id: string;
+        }[];
+      };
+      health_check: { Args: Record<PropertyKey, never>; Returns: boolean };
       invite_preview: {
         Args: { p_token: string };
         Returns: {
@@ -485,6 +554,7 @@ export type Database = {
           workspace_name: string;
         }[];
       };
+      invoke_digest: { Args: Record<PropertyKey, never>; Returns: undefined };
       is_app_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
       is_member: {
         Args: {
@@ -536,7 +606,8 @@ export type Database = {
       };
     };
     Enums: {
-      llm_feature: "extract" | "ask";
+      digest_status: "pending" | "sent" | "skipped" | "failed";
+      llm_feature: "extract" | "ask" | "digest";
       llm_outcome: "ok" | "invalid_output" | "error" | "capped" | "aborted";
       task_priority: "low" | "normal" | "high" | "urgent";
       task_source: "manual" | "extraction" | "ask";
@@ -672,7 +743,8 @@ export const Constants = {
   },
   public: {
     Enums: {
-      llm_feature: ["extract", "ask"],
+      digest_status: ["pending", "sent", "skipped", "failed"],
+      llm_feature: ["extract", "ask", "digest"],
       llm_outcome: ["ok", "invalid_output", "error", "capped", "aborted"],
       task_priority: ["low", "normal", "high", "urgent"],
       task_source: ["manual", "extraction", "ask"],

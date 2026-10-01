@@ -115,3 +115,16 @@ is cancelled") and 1 upcoming task.
 - The MFA e2e tests failed depending on the clock: a second TOTP code waits for the next 30 s window,
   longer than the default test timeout. That spec now allows 90 s.
 - Changing `next.config.ts` while `next dev` runs reloads it, and an import error stopped the server.
+
+## First production deploy (step 3.10, 2026-10-01)
+
+- Hosted Supabase refuses the REST root (`/rest/v1/`) unless the request uses a secret key. The local
+  stack allows it, so `/api/health` passed every local test and failed in production. It now probes
+  `rpc/health_check`.
+- A wrong publishable key in Vercel still showed the Google screen: starting OAuth only builds a URL.
+  Users were created, but the code exchange failed (0 sessions, unredeemed `auth.flow_state` rows).
+  `/api/health`'s `auth: false` was the first sign.
+- A second project created by mistake (`actiondesk-new`) had a near-identical name. Check the project
+  ref, not the name, before pasting keys.
+- The web app doesn't need the service role key (no code imports the admin client), so Vercel doesn't
+  get one.
