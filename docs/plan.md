@@ -39,7 +39,7 @@ Written by Claude Code in step 1.1. Editable. Must conform to docs/architecture.
 | 3.7 | Performance at 100k | done (PR #29) |
 | 3.8 | Observability | done (PR #30) |
 | 3.9 | Planted bug | owner-driven; not run yet |
-| 3.10 | Deploy | PR open on `phase3/deploy`: prod live at actiondesk-rouge.vercel.app (Supabase `obssgmldayxyniyzlpgg`, us-west-1); runbook and log in docs/deploy.md |
+| 3.10 | Deploy | live at actiondesk-rouge.vercel.app (PR #31); left: smoke test, k6 on Vercel (R-35) |
 | 3.11–3.12 | Incident drill, final review | detailed in §4; not started |
 
 ### 0.1 Phase 1 summary (2026-09-30)
@@ -834,9 +834,10 @@ Items marked **(owner)** involve locked files that I can't and won't change.
 | R-29 | Co-members can read each other's `display_name`. | Mention it in the privacy notes at 3.10. |
 | R-30 | A signed-out invitee's token passes through `/login?next=/invite/<token>` and the OAuth redirect, so it can appear in auth logs. | Accepted: a token works once, only for the invited email (D-16), and expires in 7 days. If needed, park it in a short-lived httpOnly cookie before login. |
 | R-31 | Every task change re-renders open pages in that workspace (`router.refresh()`). | Measured at 3.7: a tasks page render is ~150 rows (311 KB), and steady 10 req/s gives p95 ~230 ms on one process. Re-check on Vercel (3.10). |
-| R-32 | TOTP is enabled in `supabase/config.toml` for local and CI only. In prod it's a dashboard setting. | Add to the 3.10 deploy runbook: enable TOTP (enroll + verify) in the prod project before shipping, or owners can't delete workspaces or remove members. |
+| R-32 | TOTP is enabled in `supabase/config.toml` for local and CI only. In prod it's a dashboard setting. | Add to the 3.10 deploy runbook: enable TOTP (enroll + verify) in the prod project before shipping, or owners can't delete workspaces or remove members. **Resolved 2026-10-01: TOTP enabled in prod by the owner.** |
 | R-33 | The digest needs per-environment setup that isn't in migrations. | 3.10 runbook: Vault secrets `digest_function_url` and `service_role_key` (until they're set, the cron job does nothing); function secrets `ANTHROPIC_API_KEY`, `RESEND_API_KEY`, `EMAIL_TRANSPORT=resend`, `DIGEST_FROM`, `APP_URL`, `LLM_DAILY_CAP_USD`; Resend sending-domain verification; `supabase functions deploy digest`. |
 | R-34 | The scheduled digest isn't counted against users' AI caps (one call per member per week; logged as `digest`). The test button is counted. | Revisit with real usage at 3.7. A per-workspace cap (D-25) would cover it. |
 | R-35 | The 20-user stress test of `/tasks` has a p95 of 2.0 s on one local Node process (steady 10 req/s: 230 ms). | Re-run k6 against the first Vercel preview (3.10), where concurrent requests don't share one process. |
-| R-36 | Readable production stack traces need source maps uploaded at build: `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and `SENTRY_PROJECT` in Vercel. The digest function needs `SENTRY_DSN` (and `SENTRY_ENVIRONMENT`) as function secrets. | 3.10 runbook. Without them, errors still arrive but with minified traces, or none at all from the function. |
-| R-37 | The uptime check needs a public URL. | 3.10: an uptime monitor (e.g. Sentry Uptime) on `https://<prod>/api/health`: it alerts on non-200, and the response says which dependency (auth, db) failed. |
+| R-36 | Readable production stack traces need source maps uploaded at build: `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and `SENTRY_PROJECT` in Vercel. The digest function needs `SENTRY_DSN` (and `SENTRY_ENVIRONMENT`) as function secrets. | 3.10 runbook. Without them, errors still arrive but with minified traces, or none at all from the function. **Resolved 2026-10-01: Sentry vars set in Vercel; `SENTRY_DSN` is a function secret.** |
+| R-37 | The uptime check needs a public URL. | 3.10: an uptime monitor (e.g. Sentry Uptime) on `https://<prod>/api/health`: it alerts on non-200, and the response says which dependency (auth, db) failed. **Resolved 2026-10-01: Sentry uptime monitor on `/api/health`.** |
+| R-38 | Merging to `main` applies new migrations to production (Supabase GitHub integration, owner's choice). A migration that breaks the live code, or one merged without a backup, reaches prod with no extra step. | PRs flag migrations at the top; back up before merging; add first and remove later (conventions, "Deploying"). |
