@@ -11,8 +11,17 @@ a Resend sending domain is verified (R-33).
 Placeholders: `<ref>` = Supabase project ref, `<app>` = `https://<name>.vercel.app`.
 
 ## 0. Before every deploy
+**Merging to `main` deploys everything.** Vercel builds the app, and the Supabase GitHub integration
+("Deploy to production", turned on by the owner on 2026-10-01) applies new migrations in
+`supabase/migrations/` to the production database. So:
+- A PR that adds a migration says so at the top of its description, with what it changes and
+  whether it is safe for the code that's live until Vercel finishes (additive first, removals later).
+- **Back up before merging such a PR** (below). After the merge, check `supabase migration list`.
+- Edge Functions are not part of this: `supabase functions deploy` stays a manual, confirmed step.
+- Manual `supabase db push` is only for fixes when the integration fails.
+
 - `main` is green in CI (`ci` + `guardrails`).
-- Migrations to push: `supabase migration list` (local vs remote).
+- Migrations that will apply: `supabase migration list` (local vs remote).
 - **Backup:** Dashboard → Database → Backups. Free-tier projects have daily backups only, so for a
   risky migration also take a logical dump first:
   `supabase db dump --linked -f backup-$(date +%F).sql` (and `--data-only`). Keep it outside the repo.
@@ -120,3 +129,5 @@ Placeholders: `<ref>` = Supabase project ref, `<app>` = `https://<name>.vercel.a
 | 2026-10-01 | First Vercel deploy (`3bcf1ea`); Google sign-in reached Supabase but the code exchange failed: Vercel's publishable key wasn't this project's (health `auth:false`, 0 sessions, unredeemed flow states) | owner fixing the key in Vercel |
 | 2026-10-01 | `db push` of `health_check` (hosted Supabase refuses `/rest/v1/` with a publishable key) | `health_check()` returns true via REST with the publishable key |
 | 2026-10-01 | Owner's Vercel key fix + redeploy | health `auth:true`; Google sign-in works, session created |
+| 2026-10-01 | Merge of #31 (`94f12f9`) | health `ok` (auth and db true); 18/18 migrations match |
+| 2026-10-01 | Owner: email provider off (D-8), TOTP on (R-32), `APP_URL` secret, duplicate Vercel project removed, Sentry uptime monitor on `/api/health` (R-37), Supabase GitHub integration "Deploy to production" on | email off and Google on (checked via `/auth/v1/settings`); `APP_URL` present; one production deployment per merge |
