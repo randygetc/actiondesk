@@ -135,3 +135,6 @@ is cancelled") and 1 upcoming task.
 - The Anthropic SDK can be loaded twice (ESM and CJS, seen in Vitest), and then `instanceof
   AnthropicError` fails on errors thrown inside the SDK. Match those by message prefix instead.
 - `vercel link` appends a `VERCEL_OIDC_TOKEN` to `.env.local` (gitignored); it doesn't replace other values.
+- **The smoke test found files that were never deleted:** every attachment left in prod came from a failed
+  extraction. Success deleted its file, and failure kept it for a retry that re-uploads anyway. The
+  new e2e tests fail on the old code. Closed tabs (R-20) still leak until the cleanup job exists.

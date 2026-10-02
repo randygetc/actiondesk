@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 
 import { randomUUID } from "node:crypto";
 
@@ -370,6 +371,7 @@ export async function extractFromAttachment(
     (await requestLog()).error("capture.attachment_download_failed", {
       userId: ctx.user.id,
     });
+    await deleteAttachment(ctx, parsed.data.attachmentId);
     return once({
       type: "error",
       message: "Couldn't read the file. Try again.",
@@ -378,10 +380,26 @@ export async function extractFromAttachment(
 
   // Re-checked from the stored bytes, not trusted from the upload step.
   const note = await fileToNote(new Uint8Array(await blob.arrayBuffer()));
-  if (!note.ok) return once({ type: "error", message: note.error });
+  if (!note.ok) {
+    await deleteAttachment(ctx, parsed.data.attachmentId);
+    return once({ type: "error", message: note.error });
+  }
 
-  return run(ctx, note.note, parsed.data.includeOthers, extractUsage(ctx));
+  const usage = extractUsage(ctx);
+  // D-21: keep the file only while there's a review to save or discard. A
+  // failed, capped or abandoned extraction deletes it now; the page uploads
+  // the file again on retry. after() runs even if the browser disconnected.
+  after(async () => {
+    if (!REVIEWABLE.has(usage.outcome()))
+      await deleteAttachment(ctx, parsed.data.attachmentId);
+  });
+  return run(ctx, note.note, parsed.data.includeOthers, usage);
 }
+
+const REVIEWABLE = new Set<ReturnType<UsageRun["outcome"]>>([
+  "ok",
+  "invalid_output",
+]);
 
 /** Deletes an uploaded file when the review is discarded (D-21). */
 export async function discardAttachment(id: unknown): Promise<ActionResult> {

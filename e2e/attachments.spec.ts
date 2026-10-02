@@ -58,6 +58,38 @@ test("discarding the review deletes the file", async ({ page }) => {
   await expect.poll(attachmentCount).toBe(0);
 });
 
+test("a failed extraction deletes the file (D-21)", async ({ page }) => {
+  await upload(
+    page,
+    "broken.txt",
+    Buffer.from("- Book the room\n[fake:error]"),
+  );
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Couldn't extract tasks" }),
+  ).toBeVisible();
+  await expect.poll(attachmentCount).toBe(0);
+
+  // Trying again uploads the file again and works.
+  await page.getByLabel("Or upload a file").setInputFiles({
+    name: "fixed.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("- Book the room"),
+  });
+  await page.getByRole("button", { name: "Find tasks" }).click();
+  await expect(
+    page.getByRole("list", { name: "Found tasks" }).getByRole("listitem"),
+  ).toHaveCount(1);
+  expect(await attachmentCount()).toBe(1);
+});
+
+test("a file with no text is refused and deleted", async ({ page }) => {
+  await upload(page, "blank.txt", Buffer.from("   \n\n  "));
+  await expect(
+    page.getByRole("alert").filter({ hasText: /no text to read|empty/i }),
+  ).toBeVisible();
+  await expect.poll(attachmentCount).toBe(0);
+});
+
 test("a renamed executable is rejected by its bytes, not its name", async ({
   page,
 }) => {

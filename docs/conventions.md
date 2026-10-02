@@ -199,6 +199,9 @@ Versions: Next 16.3, React 19.2, TypeScript 5.9, Tailwind 4, Zod 4, Vitest 5, @s
 - **Text:** PDFs go to the model as a `document` block; .docx uses `mammoth.extractRawText` (never
   HTML); .vtt/.srt become `Speaker: text` lines. Text over 50,000 characters is refused, not
   truncated.
+- **A file lives only while its review does:** extraction outcomes other than `ok` and
+  `invalid_output` delete it in `after()` (D-21). Retry uploads the file again. Failure-path e2e
+  tests use a `[fake:error]` line, which makes the fake model throw.
 - **Size limit:** 4 MB (D-22), from `MAX_BYTES` and `SIZE_ERROR` in `detect.ts`. The table check and the
   bucket limit match it. `experimental.serverActions.bodySizeLimit` is 4.5 MB, which fits Vercel's
   request cap. Don't raise one without the others.

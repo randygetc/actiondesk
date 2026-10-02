@@ -56,6 +56,8 @@ export function usageRun(args: {
     setOutcome(o: Outcome) {
       outcome = o;
     },
+    /** The outcome so far; "aborted" until the generator sets one. */
+    outcome: () => outcome,
     /** Called from the generator's `finally`; a no-op if after() got there first. */
     finish,
   };
