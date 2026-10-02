@@ -321,7 +321,8 @@ Versions: Next 16.3, React 19.2, TypeScript 5.9, Tailwind 4, Zod 4, Vitest 5, @s
 ## Deploying (step 3.10, 2026-10-01)
 - **docs/deploy.md is the runbook,** and its deploy log records every production change. Ask before
   every command that touches production (`db push`, `functions deploy`, `secrets set`).
-- **Merging a PR with a migration changes production** (the Supabase GitHub integration applies it).
+- **Merging a PR with a migration or function change changes production** (the Supabase GitHub integration
+  applies migrations and redeploys every function; secrets stay manual, so new code must work safely without them).
   The PR description flags the migration first thing, and the migration must work with the code that's
   still live while Vercel builds: add first, remove in a later PR.
 - **Prod checks are read-only queries:** `supabase db query --linked "<select>"`. Print counts and
