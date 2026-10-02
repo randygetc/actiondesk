@@ -79,7 +79,34 @@ The 20-user stress p95 (2.0 s) is over the 500 ms target. That figure is one loc
 page renders per second; on Vercel, concurrent requests can run on separate instances. At realistic
 steady rates the p95 is ~230–270 ms. Re-check on the first Vercel preview (3.10).
 
-## Rejected (measured, then reverted)
+## Production: Vercel + Supabase (step 3.10, 2026-10-02, R-35)
+
+Vercel (sfo1, Hobby) and Supabase (us-west-1, Free). One test account with a seeded 5,000-task workspace,
+removed afterwards. k6 ran from the owner's machine, so every time includes the network: connecting takes
+~55 ms, a near-empty dynamic page (`/login`) has its first byte at ~270 ms, and the 292 KB tasks page
+downloads in ~100 ms. Warm, a single `/tasks` request has its first byte at ~650 ms. That's ~350–400 ms
+of server time, against ~240 ms locally.
+
+| `/tasks`, 5,000-task workspace | Local (`next start`, one process) | Production (Vercel) |
+|---|---|---|
+| Steady 5 req/s: median / p95 | n/a / 266 ms | 682 ms / 1.03 s |
+| Steady 10 req/s: median / p95 | n/a / 230 ms | 689 ms / 895 ms |
+| Stress (20 users, no pause): median / p95 | 1.30 s / 2.03 s | 1.24 s / 1.90 s |
+| Errors | 0 | 0 of ~5,600 page loads |
+
+Ask's data path (PostgREST with the user's token) under the stress run: median 193 ms, p95 545 ms, 0
+errors.
+
+**Reading it:**
+- Production latency is mostly network plus a slower function than a local machine. It doesn't grow with
+  load: 5 → 10 req/s didn't change it.
+- Under the 20-user stress run, Vercel's p95 (1.9 s, network included) is about the same as one local
+  process (2.0 s, no network). So concurrency does help, but per-request render time dominates.
+- The 500 ms p95 target isn't met from this distance. The next lever is page size and render work
+  (~150 rows, 292 KB), not the database: the Ask queries stay fast. Not optimized now (rule 13: this is the
+  measurement; any change needs its own before/after).
+
+
 - **`pg_trgm` GIN index on `tasks.title`** for `search_tasks`: the planner kept using the workspace index
   (search time unchanged), and inserting 5,000 tasks went from 150 ms to 202 ms (+35% on every write).
 - **Per-request memoization** (`React.cache`) of `requireUser`/`currentWorkspace` (shared by the layout and
