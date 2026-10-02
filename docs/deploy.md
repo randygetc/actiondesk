@@ -60,25 +60,25 @@ Placeholders: `<ref>` = Supabase project ref, `<app>` = `https://<name>.vercel.a
    - `SENTRY_DSN`, `SENTRY_ENVIRONMENT=production`
    - when the digest is turned on: `EMAIL_TRANSPORT=resend`, `RESEND_API_KEY`, `DIGEST_FROM`
    - `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are provided automatically.
-3. **Turning the digest on (R-33, later).** Verify the sending domain in Resend and set the three email
-   secrets above. Then add the Vault secrets in the SQL editor (never in a migration):
-   ```sql
-   select vault.create_secret('https://<ref>.supabase.co/functions/v1/digest', 'digest_function_url');
-   select vault.create_secret('<legacy service_role JWT>', 'service_role_key');
-   ```
-   The function accepts the scheduled call only if this equals the `SUPABASE_SERVICE_ROLE_KEY` that
-   Supabase injects into it. On hosted projects, that's the **legacy `service_role` JWT** (Settings →
-   API Keys → Legacy), not the `sb_secret_…` key. Check it with one manual run before relying on cron.
-   Until both exist, the hourly cron job (`weekly-digest`) runs and does nothing.
-   Check it with `select * from cron.job_run_details order by start_time desc limit 5;`.
-
-4. **Attachment cleanup (R-20).** `supabase functions deploy attachment-cleanup`, then in the SQL editor:
-   ```sql
-   select vault.create_secret('https://<ref>.supabase.co/functions/v1/attachment-cleanup', 'attachment_cleanup_function_url');
-   ```
-   It also needs the `service_role_key` Vault secret from step 3 (the legacy `service_role` JWT). The cron job
-   `attachment-cleanup` runs at minute 35 every hour and deletes attachments older than 24 hours, file
-   first, then row. Check it with one manual run: a POST with that key returns `{"deleted":n,...}`.
+3. **Scheduled calls (both jobs) authenticate with `CRON_SECRET`.** Hosted Supabase gives functions a
+   `SUPABASE_SERVICE_ROLE_KEY` that matches none of the project's keys, so a key copied from the
+   dashboard can never match (2026-10-02). Generate one random secret, at least 32 characters, and
+   store it in two places without echoing it:
+   - the function secret `CRON_SECRET` (`supabase secrets set --env-file <temp file>`);
+   - Vault: `select vault.create_secret('<same value>', 'cron_secret');` (from a temp SQL file, deleted
+     afterwards).
+   No `service_role_key` in Vault: nothing reads it, and it would bypass RLS.
+4. **Attachment cleanup (R-20).** `supabase functions deploy attachment-cleanup`, then
+   `select vault.create_secret('https://<ref>.supabase.co/functions/v1/attachment-cleanup', 'attachment_cleanup_function_url');`
+   The cron job `attachment-cleanup` runs at minute 35 and deletes attachments older than 24 hours,
+   file first, then row. Check it with `select public.invoke_attachment_cleanup();`, then
+   `select status_code, content from net._http_response order by created desc limit 1;`, which
+   should show `200 {"deleted":n,...}`.
+5. **Turning the digest on (R-33, later).** Verify the sending domain in Resend and set the three email
+   secrets above, then
+   `select vault.create_secret('https://<ref>.supabase.co/functions/v1/digest', 'digest_function_url');`
+   Until it exists, the hourly `weekly-digest` job does nothing. Check it with
+   `select * from cron.job_run_details order by start_time desc limit 5;`.
 
 ## 4. Vercel (owner, dashboard)
 1. Add New → Project → import `randygetc/actiondesk`. Framework: Next.js. Production branch: `main`.

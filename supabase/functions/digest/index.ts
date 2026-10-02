@@ -1,6 +1,6 @@
 // Weekly digest Edge Function (step 3.6, docs/plan.md §4.6).
 //
-// POST {"mode":"scheduled"}            from pg_cron (service key only): every
+// POST {"mode":"scheduled"}            from pg_cron (CRON_SECRET only): every
 //                                      recipient due now (digest_due), each
 //                                      recorded in digest_runs so a retry
 //                                      never resends.
@@ -28,6 +28,7 @@ import {
   isEmptyWeek,
   renderDigestEmail,
 } from "../_shared/digest.ts";
+import { isCronCall } from "../_shared/cron-auth.ts";
 
 const env = (k: string) => Deno.env.get(k) ?? "";
 const SUPABASE_URL = env("SUPABASE_URL");
@@ -332,7 +333,7 @@ async function runTest(
 }
 
 const bodySchema = z.discriminatedUnion("mode", [
-  // `now` (service key only) lets tests run "Monday 08:05" on any day.
+  // `now` (cron secret only) lets tests run "Monday 08:05" on any day.
   z.object({
     mode: z.literal("scheduled"),
     now: z.iso.datetime({ offset: true }).optional(),
@@ -349,8 +350,8 @@ Deno.serve(async (req) => {
   });
   try {
     if (body.data.mode === "scheduled") {
-      // Only the cron job holds the service key.
-      if (req.headers.get("Authorization") !== `Bearer ${SERVICE_KEY}`)
+      // Only the cron job holds CRON_SECRET (_shared/cron-auth.ts).
+      if (!isCronCall(req.headers.get("Authorization"), env("CRON_SECRET")))
         return json({ error: "unauthorized" }, 401);
       const result = await runScheduled(admin, body.data.now);
       await Sentry.flush(2_000); // per-recipient failures were captured in the batch
