@@ -152,3 +152,11 @@ is cancelled") and 1 upcoming task.
   the digest was never turned on. Fixed with a dedicated `CRON_SECRET`.
 - **`supabase migration new <name>` reads SQL from stdin** when stdin is open. In a non-interactive shell
   it waits forever. Run it with `</dev/null`.
+- **k6 on Vercel:** no errors in ~10,000 requests, and latency didn't grow with load. Most of the p95 is
+  network plus per-request render, not the database (docs/performance.md).
+- **Pasting a long cookie into `cat > file` truncates it at 4,096 characters,** the terminal's line limit.
+  Use an editor. A cookie copied from DevTools may also start a character late; check that it starts with `sb-`.
+- **In zsh, `cmd | python3 - <<EOF` gives Python both inputs** (MULTIOS), so it runs the piped data as
+  code. Put the script in a file.
+- **One `docker run` per load phase.** A second k6 command chained "for a different summary" ran the whole
+  ramp again and doubled the load sent to production.
