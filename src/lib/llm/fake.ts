@@ -11,6 +11,7 @@ import type {
  * A deterministic stand-in for the API, for e2e tests and local work without a
  * key (R-21). Every "- " bullet in the note becomes one add_task call; a date
  * written as "by YYYY-MM-DD" becomes its due date, and "?" marks low confidence.
+ * A "[fake:error]" line makes the call fail, for failure-path tests.
  * Never active in production (see isFakeLlm).
  */
 const fakeExtract: LlmClient = {
@@ -20,6 +21,7 @@ const fakeExtract: LlmClient = {
     // Only lines between the note tags, not the context above them.
     const note =
       text.match(/<(note-[0-9a-f]+)>\n([\s\S]*?)\n<\/\1>/)?.[2] ?? "";
+    if (note.includes("[fake:error]")) throw new Error("Fake model failure");
     let n = 0;
     const content: LlmContentBlock[] = note.split("\n").flatMap((line) => {
       const bullet = line.match(/^\s*[-*]\s+(.+)$/)?.[1]?.trim();

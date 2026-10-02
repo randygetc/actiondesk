@@ -132,3 +132,4 @@ Placeholders: `<ref>` = Supabase project ref, `<app>` = `https://<name>.vercel.a
 | 2026-10-01 | Merge of #31 (`94f12f9`) | health `ok` (auth and db true); 18/18 migrations match |
 | 2026-10-01 | Owner: email provider off (D-8), TOTP on (R-32), `APP_URL` secret, duplicate Vercel project removed, Sentry uptime monitor on `/api/health` (R-37), Supabase GitHub integration "Deploy to production" on | email off and Google on (checked via `/auth/v1/settings`); `APP_URL` present; one production deployment per merge |
 | 2026-10-02 | Capture failed in prod (`kind: Error`, `status: null`, 0 tokens): the Vercel variable was named `AANTHROPIC_API_KEY`. Found with `vercel logs` + `vercel env ls`; added `ANTHROPIC_API_KEY` (Secret, from stdin), removed the typo, `vercel redeploy` | Ready; health `ok` |
+| 2026-10-02 | Removed 3 attachments left by failed extractions (D-21 gap): Storage API delete (legacy `service_role` JWT, held in memory), then the rows | 0 objects, 0 rows |
