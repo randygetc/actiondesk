@@ -145,3 +145,10 @@ is cancelled") and 1 upcoming task.
   delete returned 400. Without an `Authorization` header it says "headers must have required property
   'authorization'". The legacy `service_role` JWT in both headers works. Edge Functions get that JWT as
   `SUPABASE_SERVICE_ROLE_KEY`.
+- **Scheduled calls could never authenticate in production.** The functions compared the Bearer token with
+  their injected `SUPABASE_SERVICE_ROLE_KEY`, and hosted Supabase injects a key that matches none of the
+  project's listed keys (checked by hash and by calling with each one). Locally the injected key equals the
+  reported one, so every local test passed. The digest's scheduled path had the same bug, unnoticed because
+  the digest was never turned on. Fixed with a dedicated `CRON_SECRET`.
+- **`supabase migration new <name>` reads SQL from stdin** when stdin is open. In a non-interactive shell
+  it waits forever. Run it with `</dev/null`.

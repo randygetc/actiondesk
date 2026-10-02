@@ -1,5 +1,5 @@
-// Hourly attachment cleanup (R-20, D-21). Called by pg_cron with the service
-// key (invoke_attachment_cleanup); nothing else may call it.
+// Hourly attachment cleanup (R-20, D-21). Called by pg_cron with CRON_SECRET
+// (invoke_attachment_cleanup); nothing else may call it.
 //
 // ADR-0003: the admin client is allowed here. It touches only the attachments
 // table and bucket, by id and path, and never reads file contents. Logs carry
@@ -12,6 +12,7 @@ import {
   cleanupAttachments,
   type CleanupStore,
 } from "../_shared/attachment-cleanup.ts";
+import { isCronCall } from "../_shared/cron-auth.ts";
 
 const env = (k: string) => Deno.env.get(k) ?? "";
 const SERVICE_KEY = env("SUPABASE_SERVICE_ROLE_KEY");
@@ -43,7 +44,7 @@ const json = (body: unknown, status = 200) =>
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "method" }, 405);
-  if (req.headers.get("Authorization") !== `Bearer ${SERVICE_KEY}`)
+  if (!isCronCall(req.headers.get("Authorization"), env("CRON_SECRET")))
     return json({ error: "unauthorized" }, 401);
 
   const admin = createClient(env("SUPABASE_URL"), SERVICE_KEY, {

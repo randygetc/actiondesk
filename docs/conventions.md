@@ -281,8 +281,9 @@ Versions: Next 16.3, React 19.2, TypeScript 5.9, Tailwind 4, Zod 4, Vitest 5, @s
 - **Local:** `supabase functions serve --env-file supabase/functions/.env` (gitignored). Email goes to
   Mailpit at http://127.0.0.1:54324. Cron calls the function only once the Vault secrets exist.
 - **Scheduled functions** follow the digest: a `security definer` `invoke_<name>()` reads its URL and
-  `service_role_key` from Vault and does nothing without them; the function accepts only that exact
-  Bearer key; core logic lives in `_shared/` behind a small store interface so Vitest can test it.
+  `cron_secret` from Vault and does nothing without them; the function accepts the call only if
+  `isCronCall(header, CRON_SECRET)` (`_shared/cron-auth.ts`). Never authenticate cron calls with the
+  service key: hosted Supabase gives functions one that no caller can know; core logic lives in `_shared/` behind a small store interface so Vitest can test it.
   Add each function to CI's `deno check` line and give it a `[functions.<name>]` block in `config.toml`.
 - **Deleting stored files goes through the Storage API** (`storage.remove`), file first, then row.
   A SQL delete on `storage.objects` leaves the file itself in storage.
