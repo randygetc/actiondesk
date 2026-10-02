@@ -8,7 +8,7 @@ import type { ActionResult } from "@/lib/action-result";
 import { detectFile, MIME, type FileKind } from "@/lib/attachments/detect";
 import { fileToNote } from "@/lib/attachments/note";
 import { llmClient } from "@/lib/llm";
-import { isAbort, isApiError } from "@/lib/llm/client";
+import { errorDetail, isAbort, isApiError } from "@/lib/llm/client";
 import {
   EXTRACT_PROMPT_VERSION,
   extractTasks,
@@ -182,8 +182,7 @@ async function* run(
       set("error");
       (await requestLog()).error("capture.extract_failed", {
         userId: ctx.user.id,
-        status: isApiError(e) ? (e.status ?? null) : null,
-        kind: e instanceof Error ? e.name : "unknown",
+        ...errorDetail(e),
       });
       yield {
         type: "error",
