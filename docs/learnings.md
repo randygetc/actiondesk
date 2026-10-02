@@ -128,3 +128,10 @@ is cancelled") and 1 upcoming task.
   ref, not the name, before pasting keys.
 - The web app doesn't need the service role key (no code imports the admin client), so Vercel doesn't
   get one.
+- **Capture failed in production for a whole evening** because the Vercel variable was named
+  `AANTHROPIC_API_KEY`. The log said only `kind: "Error", status: null`, which sent us after the key's
+  value, credits and paste errors first. `vercel env ls` showed the typo in one command. Logs now carry
+  `errorDetail()`: fixed codes such as `reason: "missing_credentials"`, never a message.
+- The Anthropic SDK can be loaded twice (ESM and CJS, seen in Vitest), and then `instanceof
+  AnthropicError` fails on errors thrown inside the SDK. Match those by message prefix instead.
+- `vercel link` appends a `VERCEL_OIDC_TOKEN` to `.env.local` (gitignored); it doesn't replace other values.

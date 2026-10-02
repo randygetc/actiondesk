@@ -153,6 +153,48 @@ export function isApiError(
   return e instanceof Anthropic.APIError;
 }
 
+export type ErrorDetail = {
+  status: number | null;
+  /** "api" for API responses, else the JS error name. */
+  kind: string;
+  /** The API's `error.type`, e.g. "authentication_error". */
+  type: string | null;
+  /** A fixed code for known client-side failures. */
+  reason: string | null;
+};
+
+/**
+ * What a log line may say about an LLM error (rule 12, review #8): fixed codes
+ * only, never a message, since messages can quote model output or note text.
+ * Client-side SDK errors are matched by message prefix, not instanceof: the
+ * SDK can load twice (ESM and CJS), and then instanceof fails.
+ */
+export function errorDetail(e: unknown): ErrorDetail {
+  if (e instanceof Anthropic.APIError) {
+    return {
+      status: e.status ?? null,
+      kind: "api",
+      type: e.type ?? null,
+      reason:
+        e instanceof Anthropic.APIConnectionTimeoutError
+          ? "timeout"
+          : e instanceof Anthropic.APIConnectionError
+            ? "connection"
+            : null,
+    };
+  }
+  const message = e instanceof Error ? e.message : "";
+  return {
+    status: null,
+    kind: e instanceof Error ? e.name : "unknown",
+    type: null,
+    // A missing or misnamed ANTHROPIC_API_KEY (2026-10-02 incident).
+    reason: message.startsWith("Could not resolve authentication method")
+      ? "missing_credentials"
+      : null,
+  };
+}
+
 export function isAbort(e: unknown): boolean {
   return (
     e instanceof Anthropic.APIUserAbortError ||

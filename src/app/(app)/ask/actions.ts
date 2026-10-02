@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/action-result";
 import { llmClient } from "@/lib/llm";
 import { ask, type AskEvent } from "@/lib/llm/ask";
-import { isAbort, isApiError } from "@/lib/llm/client";
+import { errorDetail, isAbort, isApiError } from "@/lib/llm/client";
 import { ASK_MODEL } from "@/lib/llm/models";
 import { ASK_PROMPT_VERSION } from "@/lib/llm/prompts/ask";
 import { CAP_MESSAGE, capReached } from "@/lib/llm/usage";
@@ -147,8 +147,7 @@ async function* run(
       set("error");
       (await requestLog()).error("ask.failed", {
         userId: ctx.user.id,
-        status: isApiError(e) ? (e.status ?? null) : null,
-        kind: e instanceof Error ? e.name : "unknown",
+        ...errorDetail(e),
       });
       yield {
         type: "error",

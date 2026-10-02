@@ -316,6 +316,14 @@ Versions: Next 16.3, React 19.2, TypeScript 5.9, Tailwind 4, Zod 4, Vitest 5, @s
   still live while Vercel builds: add first, remove in a later PR.
 - **Prod checks are read-only queries:** `supabase db query --linked "<select>"`. Print counts and
   flags, never row contents or keys.
+- **Log LLM errors with `...errorDetail(e)`** (`src/lib/llm/client.ts`): status, `kind`, the API's
+  error `type` and a fixed `reason` code. Never log `e.message`; it can quote model output or notes.
+  Add a `reason` when a new failure mode turns up, matched by a fixed prefix.
+- **When production config "doesn't work", list the names first:** `vercel env ls` (values hidden).
+- **Realtime e2e runs last and alone** (the `realtime` Playwright project depends on `chromium`), because
+  it measures latency. Put any new latency-sensitive spec there.
+- **Local e2e uses 4 workers.** At 7, tests stall on the shared dev server (measured 2026-10-02: 3/3
+  green at 4, and failures at 7 on `main` too).
 - **Health probes use what the browser key may do.** Hosted Supabase differs from local here (the REST
   root needs a secret key), so check new probes against production with the publishable key.
 - **Secrets never pass through chat or the command line.** The owner enters them in dashboards, or
