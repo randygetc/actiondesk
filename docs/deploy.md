@@ -72,6 +72,14 @@ Placeholders: `<ref>` = Supabase project ref, `<app>` = `https://<name>.vercel.a
    Until both exist, the hourly cron job (`weekly-digest`) runs and does nothing.
    Check it with `select * from cron.job_run_details order by start_time desc limit 5;`.
 
+4. **Attachment cleanup (R-20).** `supabase functions deploy attachment-cleanup`, then in the SQL editor:
+   ```sql
+   select vault.create_secret('https://<ref>.supabase.co/functions/v1/attachment-cleanup', 'attachment_cleanup_function_url');
+   ```
+   It also needs the `service_role_key` Vault secret from step 3 (the legacy `service_role` JWT). The cron job
+   `attachment-cleanup` runs at minute 35 every hour and deletes attachments older than 24 hours, file
+   first, then row. Check it with one manual run: a POST with that key returns `{"deleted":n,...}`.
+
 ## 4. Vercel (owner, dashboard)
 1. Add New → Project → import `randygetc/actiondesk`. Framework: Next.js. Production branch: `main`.
 2. Environment variables (Production; Preview too, if previews should work):

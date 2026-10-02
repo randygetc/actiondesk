@@ -138,3 +138,10 @@ is cancelled") and 1 upcoming task.
 - **The smoke test found files that were never deleted:** every attachment left in prod came from a failed
   extraction. Success deleted its file, and failure kept it for a retry that re-uploads anyway. The
   new e2e tests fail on the old code. Closed tabs (R-20) still leak until the cleanup job exists.
+- **Attachment cleanup (R-20)** was planned for Phase 3 and missed until the smoke test turned up leftover
+  files. Local end-to-end check: an attachment backdated 25 h was removed (row and file), and a fresh one
+  was kept.
+- **Storage API auth with the new keys:** with an `sb_secret_…` key as `Authorization: Bearer`, the
+  delete returned 400. Without an `Authorization` header it says "headers must have required property
+  'authorization'". The legacy `service_role` JWT in both headers works. Edge Functions get that JWT as
+  `SUPABASE_SERVICE_ROLE_KEY`.
