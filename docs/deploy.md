@@ -13,11 +13,17 @@ Placeholders: `<ref>` = Supabase project ref, `<app>` = `https://<name>.vercel.a
 ## 0. Before every deploy
 **Merging to `main` deploys everything.** Vercel builds the app, and the Supabase GitHub integration
 ("Deploy to production", turned on by the owner on 2026-10-01) applies new migrations in
-`supabase/migrations/` to the production database. So:
+`supabase/migrations/` to the production database and redeploys all Edge Functions. So:
 - A PR that adds a migration says so at the top of its description, with what it changes and
   whether it is safe for the code that's live until Vercel finishes (additive first, removals later).
 - **Back up before merging such a PR** (below). After the merge, check `supabase migration list`.
-- Edge Functions are not part of this: `supabase functions deploy` stays a manual, confirmed step.
+- **Edge Functions too:** the integration redeploys every function on every merge, even a docs-only one
+  (checked 2026-10-02: #37 → digest v13→v14, attachment-cleanup v5→v6, same minute). Function code in
+  prod always matches `main`.
+- **Secrets and Vault entries are not deployed.** Set them by hand (confirmed first). A function that
+  needs a new secret goes live before the secret exists, so it must refuse safely without it (as
+  `isCronCall` does).
+- A manual `supabase functions deploy` is only for an urgent fix, and the next merge replaces it with `main`.
 - Manual `supabase db push` is only for fixes when the integration fails.
 
 - `main` is green in CI (`ci` + `guardrails`).
@@ -144,3 +150,4 @@ Placeholders: `<ref>` = Supabase project ref, `<app>` = `https://<name>.vercel.a
 | 2026-10-02 | #35 merged (cleanup migration applied by the integration); `functions deploy attachment-cleanup`; Vault `attachment_cleanup_function_url` and `service_role_key` | first run: **401**, because the injected service key matches no project key → #36 |
 | 2026-10-02 | #36 merged (cron functions read `cron_secret`); `CRON_SECRET` generated, set as function secret and Vault `cron_secret` (temp files shredded); Vault `service_role_key` deleted; both functions redeployed | `invoke_attachment_cleanup()` → `200 {"deleted":0}`; without the secret → 401. Vault now holds only `attachment_cleanup_function_url` and `cron_secret` |
 | 2026-10-02 | k6 on Vercel (R-35): seeded a 5,000-task "Perf workspace (k6)" for the owner's spare test account; 5 and 10 req/s for 60 s, then the 20-user ramp (run twice by mistake): ~10,000 requests | 0 errors; workspace, tasks and projects deleted afterwards (0 left); local session copies shredded. The owner signs the test account out and deletes `~/k6-prod-session.txt` |
+| 2026-10-02 | Checked: merging #37 (docs only) redeployed both Edge Functions (integration build path `/app/…`) | runbook §0 corrected |
