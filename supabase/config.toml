@@ -431,3 +431,7 @@ enabled = true
 # the user's JWT for test sends), so the gateway JWT check is off.
 [functions.digest]
 verify_jwt = false
+
+[functions.attachment-cleanup]
+# Called only by pg_cron with the service key; the function checks it itself.
+verify_jwt = false
